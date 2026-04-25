@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f0f1a">
+    
+    <title>7test - Pro Billiards V7.3 Final</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-touch-callout: none; }
+        body, html { display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; background: radial-gradient(circle at center, #2a2a3e 0%, #0f0f1a 100%); color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; touch-action: none;}
+        
+        #startOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 15, 26, 0.95); backdrop-filter: blur(10px); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; transition: 0.5s; }
+        #startOverlay h1 { font-size: 45px; margin-bottom: 30px; color: #f1c40f; text-shadow: 0 4px 20px rgba(241,196,15,0.6); letter-spacing: 2px;}
+        
+        .menu-btn { padding: 15px 40px; font-size: 20px; font-weight: bold; color: white; border: none; border-radius: 50px; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; width: 300px; text-align: center; }
+        .menu-btn:active:not(:disabled) { transform: scale(0.95); }
+        .menu-btn:disabled { background: #555 !important; cursor: not-allowed; box-shadow: none !important; color: #aaa;}
+        
+        #btnOffline { background: linear-gradient(135deg, #a29bfe, #6c5ce7); box-shadow: 0 10px 20px rgba(108, 92, 231, 0.4); margin-bottom: 20px; }
+        #btnOnline { background: linear-gradient(135deg, #00b894, #00cec9); box-shadow: 0 10px 20px rgba(0, 184, 148, 0.4); }
+        
+        #onlineSetup { flex-direction: column; align-items: center; background: rgba(0,0,0,0.4); padding: 30px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
+        .setup-input { padding: 15px 20px; font-size: 18px; border-radius: 10px; border: 2px solid #f1c40f; outline: none; text-align: center; font-weight: bold; width: 300px; margin-bottom: 15px; background: rgba(255,255,255,0.9); }
+        .action-btns { display: flex; gap: 15px; margin-top: 10px;}
+        #btnHost { background: #0984e3; padding: 12px 25px; width: auto; font-size: 16px; border-radius: 10px;}
+        #btnJoin { background: #d63031; padding: 12px 25px; width: auto; font-size: 16px; border-radius: 10px;}
+        #btnBack, #btnCancelPeer { background: transparent; color: #aaa; border: none; margin-top: 20px; font-size: 16px; text-decoration: underline; cursor: pointer; }
+
+        #waitingRoom { display: none; color: #f1c40f; font-size: 22px; font-weight: bold; margin-top: 20px; text-align: center; }
+        
+        #gameContainer { display: none; width: 100vw; height: 100vh; flex-direction: column; overflow: hidden; position: relative;}
+
+        .header { padding: 6px 15px; width: 100%; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; background: rgba(0,0,0,0.5); border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;}
+        .header h2 { font-size: 18px; color: #f1c40f; text-transform: uppercase; letter-spacing: 3px; margin: 0; text-shadow: 0 2px 10px rgba(241,196,15,0.3); display: none;}
+        
+        .header-btns { display: flex; gap: 5px; align-items: center; }
+        #btnExitGame { background: #d63031; color: white; border: 1px solid #ff7675; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        #btnExitGame:active { transform: scale(0.95); }
+        #btnFullscreen { background: #0984e3; color: white; border: 1px solid #74b9ff; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        #btnFullscreen:active { transform: scale(0.95); }
+
+        .scoreboard { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.6); border: 2px solid #f1c40f; border-radius: 8px; padding: 4px 15px; font-size: 16px; font-weight: 900; box-shadow: 0 5px 15px rgba(0,0,0,0.5); flex-grow: 1; max-width: 400px; margin: 0 auto; display: none;}
+        .score-host { color: #0984e3; display: flex; align-items: center; gap: 8px; text-transform: uppercase; font-size: 14px;}
+        .score-client { color: #d63031; display: flex; align-items: center; gap: 8px; text-transform: uppercase; font-size: 14px;}
+        .score-race { font-size: 12px; color: #f1c40f; text-transform: uppercase; letter-spacing: 1px; }
+        .score-number { background: #fff; color: #111; padding: 2px 8px; border-radius: 5px; font-size: 18px; }
+
+        select#gameModeSelect { padding: 4px 10px; font-size: 12px; background: rgba(44, 62, 80, 0.8); backdrop-filter: blur(5px); color: white; border: 1px solid #f1c40f; border-radius: 6px; outline: none; font-weight: bold; cursor: pointer; transition: 0.2s;}
+        select#gameModeSelect:disabled { background: #555; color: #999; border-color: #777; cursor: not-allowed; }
+        
+        #turnIndicator { padding: 4px 10px; border-radius: 5px; background: #555; color: white; font-weight: bold; letter-spacing: 1px; font-size: 11px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.2);}
+        .turn-mine { background: #00b894 !important; box-shadow: 0 0 10px rgba(0,184,148,0.5); }
+        .turn-enemy { background: #d63031 !important; }
+        
+        #turnTimerDisplay { font-size: 14px; font-weight: 900; color: #00b894; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); min-width: 50px; text-align: center; }
+        
+        #btnExtendTimer { background: #e17055; color: white; border: 1px solid #d63031; padding: 4px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; transition: 0.2s; display: none;}
+        #btnExtendTimer:disabled { background: #555; border-color: #444; color: #888; cursor: not-allowed; }
+        #btnExtendTimer:active:not(:disabled) { transform: scale(0.9); }
+
+        .game-main { display: flex; flex: 1; flex-direction: row; padding: 5px; gap: 8px; align-items: stretch; justify-content: space-between; overflow: hidden; }
+
+        .panel { display: flex; flex-direction: column; gap: 8px; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; padding: 8px; justify-content: flex-start; }
+        .panel-left { width: 105px; flex-shrink: 0; } 
+        .panel-right { width: 120px; flex-shrink: 0; }
+
+        .table-container { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; padding: 5px; background: linear-gradient(135deg, #3e2723, #1b1008); border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9), inset 0 0 10px rgba(0,0,0,0.8), inset 0 0 0 4px #0a0502; min-width: 0; min-height: 0;}
+        canvas { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; aspect-ratio: 2 / 1; border-radius: 4px; box-shadow: inset 0px 10px 30px rgba(0,0,0,0.9); }
+
+        .control-group { display: flex; flex-direction: column; gap: 6px; width: 100%; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; align-items: center; }
+        .control-group label { font-weight: bold; color: #f1c40f; font-size: 10px; text-transform: uppercase; width: 100%; text-align: center; letter-spacing: 0.5px; margin-bottom: 0;}
+
+        .radio-group { display: flex; flex-direction: column; width: 100%; border-radius: 6px; overflow: hidden; border: 1px solid #f1c40f; box-shadow: 0 2px 5px rgba(0,0,0,0.5);}
+        .radio-group input { display: none; }
+        .radio-btn { width: 100%; text-align: center; background: #2c3e50; color: #ecf0f1; padding: 6px 0; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s; text-transform: uppercase; margin: 0; border-bottom: 1px solid rgba(0,0,0,0.5);}
+        .radio-btn:last-child { border-bottom: none; }
+        .radio-group input:checked + .radio-btn { background: #f1c40f; color: #111; }
+        .radio-group input:disabled + .radio-btn { background: #555; color: #888; cursor: not-allowed; }
+
+        #spinTarget { width: 60px; height: 60px; border-radius: 50%; border: 2px solid #f1c40f; position: relative; background: radial-gradient(circle at 30% 30%, #ecf0f1 0%, #bdc3c7 40%, #7f8c8d 100%); box-shadow: inset -3px -3px 10px rgba(0,0,0,0.6), 0 3px 10px rgba(0,0,0,0.4); cursor: crosshair; }
+        #spinTarget::before { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: rgba(0,0,0,0.3); }
+        #spinTarget::after { content: ''; position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: rgba(0,0,0,0.3); }
+        #spinDot { width: 12px; height: 12px; background: #e74c3c; border-radius: 50%; border: 2px solid #fff; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 2px 4px rgba(0,0,0,0.6); pointer-events: none; }
+
+        #targetBallDisplay { color: #fff; background: #d63031; padding: 6px; border-radius: 6px; font-size: 11px; font-weight: bold; width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3); gap: 4px; line-height: 1.2;}
+        .target-ball-graphic { width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 10px; color: black; box-shadow: inset -2px -2px 4px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.5); margin: 0;}
+        .striped-ball { background: #fff; position: relative; overflow: hidden; }
+        .striped-ball::before { content: ''; position: absolute; top: 18%; left: 0; right: 0; bottom: 18%; background: var(--ball-color); z-index: 0; }
+        .striped-ball span, .solid-ball span { background: #fff; border-radius: 50%; width: 10px; height: 10px; display: flex; align-items: center; justify-content: center; z-index: 1; font-size: 9px; line-height: 1; }
+        .solid-ball { background: var(--ball-color); }
+
+        .aim-row { display: flex; align-items: center; gap: 5px; width: 100%; justify-content: space-between; flex-wrap: wrap;}
+        .aim-row button { background: linear-gradient(to bottom, #34495e, #2c3e50); color: #f1c40f; border: 1px solid #1a252f; width: 30px; height: 30px; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.4); flex-shrink: 0;}
+        .aim-row button:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+        
+        #shootBtn { width: 100%; background: linear-gradient(135deg, #ff7675, #d63031); color: white; border: 2px solid #fab1a0; padding: 10px 5px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 10px rgba(214, 48, 49, 0.4); text-transform: uppercase; transition: 0.2s; letter-spacing: 1px;}
+        #shootBtn:active { transform: scale(0.92); box-shadow: 0 2px 5px rgba(214, 48, 49, 0.4);}
+        #shootBtn:disabled { background: linear-gradient(135deg, #b2bec3, #636e72); border-color: #dfe6e9; cursor: not-allowed; box-shadow: none; transform: scale(1); color: #ecf0f1;}
+
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 10px; cursor: pointer; background: #111; border-radius: 5px; border: 1px solid #000; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); }
+        input[type=range]::-webkit-slider-thumb { border: 2px solid #f1c40f; height: 20px; width: 20px; border-radius: 50%; background: linear-gradient(to bottom, #34495e, #2c3e50); cursor: pointer; -webkit-appearance: none; margin-top: -6px; box-shadow: 0 3px 8px rgba(0,0,0,0.8); transition: 0.1s;}
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.15); border-color: #fff;}
+        #powerSlider::-webkit-slider-runnable-track { background: linear-gradient(90deg, #00b894, #fdcb6e, #d63031); }
+        #powerSlider::-webkit-slider-thumb { border-color: #ff7675; background: #fff; width: 26px; height: 26px; margin-top: -9px;}
+        #elevationSlider::-webkit-slider-runnable-track { background: linear-gradient(90deg, #74b9ff, #a29bfe); }
+        #elevationSlider::-webkit-slider-thumb { border-color: #a29bfe; background: #fff; width: 18px; height: 18px; margin-top: -5px;}
+        input[type=range]:disabled::-webkit-slider-thumb { border-color: #b2bec3; background: #dfe6e9; transform: scale(0.8); }
+        input[type=range]:disabled::-webkit-slider-runnable-track { background: #555; }
+
+        #foulPopup { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8); background: rgba(214, 48, 49, 0.95); backdrop-filter: blur(8px); color: white; padding: 15px 25px; border-radius: 12px; font-size: 16px; font-weight: bold; z-index: 100; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.8); text-align: center; border: 2px solid #ff7675; transition: 0.3s; pointer-events: none;}
+        #foulPopup.show { display: block; transform: translate(-50%, -50%) scale(1); }
+
+        #portrait-warning {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: rgba(15, 15, 26, 0.98);
+            color: #f1c40f; z-index: 10000;
+            align-items: center; justify-content: center;
+            font-size: 22px; font-weight: bold; text-align: center;
+        }
+
+        @media screen and (orientation: portrait) {
+            #portrait-warning { display: flex; }
+            #startOverlay, #gameContainer { display: none !important; }
+        }
+
+        @media screen and (orientation: landscape) {
+            canvas#poolTable { transform: translateY(-8%); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="portrait-warning">
+        <div class="warning-content">
+            <p>🔄 Vui lòng xoay ngang điện thoại để chơi bida!</p>
+        </div>
+    </div>
+
+    <div id="startOverlay">
+        <h1>7test V7.3 Final</h1>
+        
+        <div id="menuSelection" style="display: flex; flex-direction: column;">
+            <button id="btnOffline" class="menu-btn">Chơi Offline</button>
+            <button id="btnOnline" class="menu-btn">Chơi Online (Bạn bè)</button>
+        </div>
+
+        <div id="onlineSetup" style="display: none;">
+            <p style="color: #ecf0f1; margin-bottom: 5px; font-weight: bold;">1. Tên hiển thị của bạn:</p>
+            <input type="text" id="playerNameInput" class="setup-input" placeholder="Ví dụ: Faker" style="border-color:#00b894">
+            
+            <p style="color: #ecf0f1; margin-bottom: 5px; font-weight: bold; margin-top: 10px;">2. Nhập Mã Phòng:</p>
+            <input type="text" id="customRoomId" class="setup-input" placeholder="Ví dụ: vip123">
+            
+            <div class="action-btns">
+                <button id="btnHost" class="menu-btn">Tạo Phòng</button>
+                <button id="btnJoin" class="menu-btn">Vào Phòng</button>
+            </div>
+            <button id="btnBack">🔙 Quay lại</button>
+        </div>
+
+        <div id="waitingRoom">
+            <span id="displayPeerError" style="color: #d63031; display: none; margin-bottom: 10px;">Lỗi...</span>
+            <span id="displayWaitingMsg">Đang tạo phòng... <br><span id="displayRoomId" style="color: #fff; text-decoration: underline; display: block; text-align: center; margin-top: 10px;"></span></span>
+            <button id="btnCancelPeer">🔙 Hủy</button>
+        </div>
+    </div>
+
+    <div id="gameContainer">
+        
+        <div id="readyPanel" style="display: none; position: absolute; top: 60px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); border: 2px solid #f1c40f; padding: 12px 25px; border-radius: 10px; z-index: 100; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.8); backdrop-filter: blur(5px);">
+            <div style="color: #f1c40f; font-size: 16px; margin-bottom: 8px; font-weight: bold;">PHÒNG TẬP</div>
+            <div id="readyStatusDisplay" style="color: #ecf0f1; margin-bottom: 10px; font-size: 13px;">Bạn: Chưa | Đối thủ: Chưa</div>
+            <button id="btnReadyStart" class="menu-btn" style="width: auto; padding: 8px 20px; font-size: 13px; background: #00b894;">SẴN SÀNG</button>
+        </div>
+
+        <div class="header">
+            <div class="header-btns">
+                <button id="btnExitGame">🔙 THOÁT</button>
+                <button id="btnFullscreen">🔲 TOÀN MÀN HÌNH</button>
+            </div>
+            <h2 id="gameTitle">7test</h2>
+            <div class="scoreboard" id="scoreboardPanel">
+                <div class="score-host"><span id="hostNameDisplay">HOST</span> <span class="score-number" id="hostScoreUI">0</span></div>
+                <div class="score-race">Chạm 7</div>
+                <div class="score-client"><span class="score-number" id="clientScoreUI">0</span> <span id="clientNameDisplay">GUEST</span></div>
+            </div>
+            <div style="display:flex; gap: 8px; align-items: center;">
+                <div id="turnIndicator">OFFLINE</div>
+                <div id="turnTimerDisplay" style="display: none;">⏱ 30s</div>
+                <button id="btnExtendTimer" disabled>+30s</button>
+                <select id="gameModeSelect">
+                    <option value="7ball">7-Bi</option>
+                    <option value="8ball" selected>8-Bi</option>
+                    <option value="9ball">9-Bi</option>
+                    <option value="10ball">10-Bi</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="game-main">
+            
+            <div class="panel panel-left">
+                <div class="control-group">
+                    <label>🎱 Loại Cơ</label>
+                    <div class="radio-group" id="cueSelectors">
+                        <input type="radio" id="cuePlay" name="cueType" value="play">
+                        <label class="radio-btn" for="cuePlay">Đánh</label>
+                        
+                        <input type="radio" id="cueBreak" name="cueType" value="break" checked>
+                        <label class="radio-btn" for="cueBreak">Phá</label>
+                        
+                        <input type="radio" id="cueJump" name="cueType" value="jump">
+                        <label class="radio-btn" for="cueJump">Nhảy</label>
+                    </div>
+                </div>
+                
+                <div class="control-group" style="padding-top: 4px;">
+                    <label id="elevLabel">📐 Cắm: Tắt</label>
+                    <input type="range" id="elevationSlider" min="0" max="80" step="1" value="0" disabled>
+                </div>
+
+                <div class="control-group">
+                    <label>Áp Phê</label>
+                    <div id="spinTarget"><div id="spinDot"></div></div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div id="foulPopup">⚠️ LỖI!<br><span id="foulDesc" style="font-size:14px;font-weight:normal">Bi cái cầm tay.</span></div>
+                <canvas id="poolTable"></canvas>
+            </div>
+
+            <div class="panel panel-right">
+                <div class="control-group">
+                    <label>🎯 Mục tiêu</label>
+                    <div id="targetBallDisplay">Mục tiêu...</div>
+                </div>
+
+                <div class="control-group">
+                    <label>Hướng Ngắm</label>
+                    <div class="aim-row">
+                        <button id="btnLeft">◀</button>
+                        <button id="btnRight">▶</button>
+                        <input type="range" id="aimSlider" min="0" max="360" step="0.1" value="0" style="margin-top: 5px;">
+                    </div>
+                </div>
+
+                <div class="control-group" style="margin-top: auto;">
+                    <label>⚡ Lực Đánh</label>
+                    <input type="range" id="powerSlider" min="0" max="100" step="1" value="0" style="margin-bottom: 5px;">
+                    <button id="shootBtn" disabled>💥 Bắn</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('poolTable');
+        const ctx = canvas.getContext('2d');
+
+        const RESOLUTION_SCALE = 3; 
+        const TABLE_WIDTH = 800; 
+        const TABLE_HEIGHT = 400;
+        
+        canvas.width = TABLE_WIDTH * RESOLUTION_SCALE;
+        canvas.height = TABLE_HEIGHT * RESOLUTION_SCALE;
+        ctx.scale(RESOLUTION_SCALE, RESOLUTION_SCALE);
+
+        let audioCtx = null;
+        function initAudio() { 
+            try { 
+                const AudioContext = window.AudioContext || window.webkitAudioContext; 
+                if (AudioContext && !audioCtx) { audioCtx = new AudioContext(); } 
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); 
+            } catch(e) {} 
+        }
+
+        document.body.addEventListener('click', initAudio, { once: true });
+
+        function playHitSound(impactSpeed) {
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') { audioCtx.resume().catch(e => console.log(e)); }
+            if (impactSpeed < 0.08) return; 
+            try {
+                let volume = Math.min(2.5, impactSpeed * 0.12); 
+                const osc = audioCtx.createOscillator(); 
+                const gainNode = audioCtx.createGain();
+                osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+                osc.type = 'sine'; 
+                osc.frequency.setValueAtTime(1500, audioCtx.currentTime); 
+                osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.06);
+                gainNode.gain.setValueAtTime(volume, audioCtx.currentTime); 
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.06);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.06);
+            } catch(e) {}
+        }
+
+        const colorMap = {
+            1: '#f9ca24', 2: '#3498db', 3: '#eb4d4b', 4: '#686de0', 5: '#f0932b', 
+            6: '#22a6b3', 7: '#833471', 8: '#111111', 9: '#f9ca24', 10: '#3498db',
+            11: '#eb4d4b', 12: '#686de0', 13: '#f0932b', 14: '#22a6b3', 15: '#833471'
+        };
+
+        const customFeltUrl = "https://i.ibb.co/PGffLFVF/C0375-C58-469-F-40-F8-9-EC9-893-D41779-D8-E.jpg"; 
+        const feltImage = new Image();
+        feltImage.crossOrigin = "Anonymous";
+        if(customFeltUrl) feltImage.src = customFeltUrl;
+
+        const FRICTION = 0.988; const CUSHION_BOUNCE = 0.85; const BALL_RESTITUTION = 0.95; 
+        const BALL_RADIUS = 12; 
+        const POCKET_RADIUS = 22; const SUB_STEPS = 30; const STEP_FRICTION = Math.pow(FRICTION, 1 / SUB_STEPS); 
+        const CUSHION_WIDTH = 18; const GRAVITY = 3.0; const SPIN_DECAY = Math.pow(0.98, 1 / SUB_STEPS); 
+        const DRAW_FOLLOW_STRENGTH = 0.012 / SUB_STEPS; const CUSHION_SPIN_STRENGTH = 0.08; 
+
+        const pockets = [ { x: CUSHION_WIDTH - 4, y: CUSHION_WIDTH - 4 }, { x: TABLE_WIDTH / 2, y: CUSHION_WIDTH - 10 }, { x: TABLE_WIDTH - CUSHION_WIDTH + 4, y: CUSHION_WIDTH - 4 }, { x: CUSHION_WIDTH - 4, y: TABLE_HEIGHT - CUSHION_WIDTH + 4 }, { x: TABLE_WIDTH / 2, y: TABLE_HEIGHT - CUSHION_WIDTH + 10 }, { x: TABLE_WIDTH - CUSHION_WIDTH + 4, y: TABLE_HEIGHT - CUSHION_WIDTH + 4 } ];
+
+        let gameMode = '8ball'; 
+        let currentCueType = 'break'; 
+        let balls = []; let cueBall; let isCueBallStopped = true; let isBreakShot = true; let isBallInHand = true; 
+        let isDraggingCueBall = false; let spinX = 0; let spinY = 0; let isDraggingSpin = false; let isDraggingAim = false;
+        let lastPointerX = null; let lastPointerY = null; let playerGroup = null; let shotInProgress = false;
+        let firstHitBall = null; let lowestBallTarget = 1; let isFoulAnimating = false; let pocketedBallsThisShot = []; 
+        let cueBallScratchedThisShot = false; let cueBallOffTableThisShot = false; let objectBallOffTableThisShot = false; let calledPocket = null;
+        let currentMiscueMsg = null;
+
+        let matchPhase = 'PRACTICE'; 
+        let lagHostShot = false, lagClientShot = false, lagResolved = false;
+        let hostBall = null, clientBall = null, lagWinnerName = "";
+
+        let shotInitiatedByMe = false;
+        let isStroking = false;
+        let strokePhase = 0;
+        let targetStrokes = 4;
+        let pendingShot = null;
+
+        let turnTimeLeft = 30;
+        let lastTimeTick = Date.now();
+        const turnTimerDisplay = document.getElementById('turnTimerDisplay');
+        const btnExtendTimer = document.getElementById('btnExtendTimer');
+
+        let hostExtensionUsed = false;
+        let clientExtensionUsed = false;
+        let frameCount = 0;
+        let latestSyncState = null; 
+
+        function showNotification(msg) {
+            let notif = document.createElement('div');
+            notif.innerHTML = msg;
+            notif.style.position = 'absolute';
+            notif.style.top = '15%';
+            notif.style.left = '50%';
+            notif.style.transform = 'translateX(-50%)';
+            notif.style.background = 'rgba(0, 184, 148, 0.95)';
+            notif.style.border = '2px solid #55efc4';
+            notif.style.color = '#fff';
+            notif.style.padding = '8px 15px';
+            notif.style.borderRadius = '8px';
+            notif.style.fontWeight = 'bold';
+            notif.style.zIndex = '500';
+            notif.style.boxShadow = '0 5px 15px rgba(0,0,0,0.5)';
+            notif.style.pointerEvents = 'none';
+            notif.style.transition = 'opacity 0.3s';
+            document.getElementById('gameContainer').appendChild(notif);
+            setTimeout(() => { notif.style.opacity = '0'; setTimeout(() => notif.remove(), 300); }, 2200);
+        }
+
+        btnExtendTimer.addEventListener('click', () => {
+            if (!isOnline || !isMyTurn || matchPhase === 'LAG') return;
+            if (isHost && hostExtensionUsed) return;
+            if (!isHost && clientExtensionUsed) return;
+
+            if (isHost) hostExtensionUsed = true;
+            else clientExtensionUsed = true;
+            
+            turnTimeLeft += 30;
+            updateTimerUI();
+            btnExtendTimer.disabled = true;
+            
+            sendNetworkData({ type: 'SYNC_EXTENSION', isHost: isHost });
+            showNotification("Đã gọi thêm 30s!");
+        });
+
+        function startStrokeAnimation(power, aim, elev, spX, spY, cueType, isLag = false) {
+            isBallInHand = false; 
+            isStroking = true;
+            strokePhase = 0;
+            targetStrokes = 4; 
+            pendingShot = { power, aim, elev, spX, spY, cueType, isLag };
+        }
+
+        let isMatchStarted = false;
+        let myReadyStatus = false;
+        let enemyReadyStatus = false;
+
+        const aimSlider = document.getElementById('aimSlider'); const elevationSlider = document.getElementById('elevationSlider'); const powerSlider = document.getElementById('powerSlider');
+        const spinTarget = document.getElementById('spinTarget'); const spinDot = document.getElementById('spinDot'); const modeSelect = document.getElementById('gameModeSelect');
+        const targetDisplay = document.getElementById('targetBallDisplay'); const foulPopup = document.getElementById('foulPopup'); const foulDesc = document.getElementById('foulDesc');
+        const shootBtn = document.getElementById('shootBtn'); const elevLabel = document.getElementById('elevLabel'); 
+        const cueModes = document.querySelectorAll('input[name="cueType"]'); 
+
+        const rotVector = (v, kx, ky, theta) => { let cosT = Math.cos(theta); let sinT = Math.sin(theta); let dot = kx*v.x + ky*v.y; let nx = v.x*cosT + (ky*v.z)*sinT + kx*dot*(1-cosT); let ny = v.y*cosT + (-kx*v.z)*sinT + ky*dot*(1-cosT); let nz = v.z*cosT + (kx*v.y - ky*v.x)*sinT; v.x = nx; v.y = ny; v.z = nz; };
+        const rotZ = (v, spinTheta) => { let cosT = Math.cos(spinTheta); let sinT = Math.sin(spinTheta); let nx = v.x*cosT - v.y*sinT; let ny = v.x*sinT + v.y*cosT; v.x = nx; v.y = ny; };
+        const normalize = (v) => { let len = Math.hypot(v.x, v.y, v.z); v.x/=len; v.y/=len; v.z/=len; };
+
+        cueModes.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                currentCueType = e.target.value;
+                if (currentCueType === 'play') { elevationSlider.value = 0; elevationSlider.disabled = true; elevLabel.innerText = "📐 Cắm: Tắt"; } 
+                else if (currentCueType === 'break') { elevationSlider.value = 0; elevationSlider.disabled = true; elevLabel.innerText = "📐 Cắm: Tắt"; }
+                else if (currentCueType === 'jump') { elevationSlider.disabled = false; elevationSlider.min = 0; elevationSlider.max = 80; elevationSlider.value = 30; elevLabel.innerText = "📐 Góc: 30°"; }
+            });
+        });
+        elevationSlider.addEventListener('input', (e) => { if (currentCueType === 'jump') elevLabel.innerText = `📐 Góc: ${e.target.value}°`; });
+
+        class Ball {
+            constructor(x, y, color, isCue = false, number = 0) {
+                this.x = x; this.y = y; this.z = 0; this.radius = BALL_RADIUS; this.color = color;
+                this.vx = 0; this.vy = 0; this.vz = 0; this.mass = 1; this.isCue = isCue; this.active = true;
+                this.number = number; this.spinEnergyX = 0; this.spinEnergyY = 0; this.sideSpin = 0; this.hasHitObject = false;
+                this.isPocketing = false; this.targetPocket = null; this.pocketIndex = -1;
+                let randZ = Math.random() * 2 - 1; let theta = Math.random() * Math.PI * 2; let r = Math.sqrt(1 - randZ*randZ);
+                this.pole = { x: r*Math.cos(theta), y: r*Math.sin(theta), z: randZ }; 
+                let temp = (Math.abs(this.pole.z) > 0.9) ? { x: 1, y: 0, z: 0 } : { x: 0, y: 0, z: 1 };
+                let cx = this.pole.y*temp.z - this.pole.z*temp.y; let cy = this.pole.z*temp.x - this.pole.x*temp.z; let cz = this.pole.x*temp.y - this.pole.y*temp.x; let cLen = Math.hypot(cx, cy, cz);
+                this.equatorX = { x: cx/cLen, y: cy/cLen, z: cz/cLen }; 
+                this.hitRightCushion = false;
+            }
+
+            draw() {
+                if (!this.active) return;
+                if (!this.isPocketing) {
+                    ctx.beginPath(); 
+                    let shadowOffset = Math.max(0, this.z * 0.6); 
+                    let shadowRadVal = this.radius * Math.max(0.3, 1 - this.z * 0.025); 
+                    let shadowAlpha = Math.max(0.05, 0.6 - this.z * 0.015); 
+                    ctx.arc(this.x + 4 + shadowOffset, this.y + 5 + shadowOffset, shadowRadVal, 0, Math.PI * 2); 
+                    let shadowGradient = ctx.createRadialGradient(this.x + 4 + shadowOffset, this.y + 5 + shadowOffset, 0, this.x + 4 + shadowOffset, this.y + 5 + shadowOffset, shadowRadVal * 1.6);
+                    shadowGradient.addColorStop(0, `rgba(0, 0, 0, ${shadowAlpha})`); 
+                    shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                    ctx.fillStyle = shadowGradient; ctx.fill(); ctx.closePath();
+                }
+
+                ctx.save(); 
+                let drawZ = Math.max(0, this.z * 1.2); 
+                let drawScale = 1 + (this.z * 0.01); 
+                
+                if (this.isPocketing) drawScale = Math.max(0, 1 + (this.z * 0.03)); 
+                if (drawScale <= 0) { ctx.restore(); return; } 
+                
+                ctx.translate(this.x, this.y - drawZ); 
+                ctx.scale(drawScale, drawScale);
+                let eqY = { x: this.pole.y*this.equatorX.z - this.pole.z*this.equatorX.y, y: this.pole.z*this.equatorX.x - this.pole.x*this.equatorX.z, z: this.pole.x*this.equatorX.y - this.pole.y*this.equatorX.x };
+                ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2); ctx.clip();
+                
+                if (this.isCue) {
+                    let cueGradient = ctx.createRadialGradient(-this.radius * 0.3, -this.radius * 0.3, 0, 0, 0, this.radius);
+                    cueGradient.addColorStop(0, '#f8f8f8'); cueGradient.addColorStop(0.25, '#fff'); cueGradient.addColorStop(0.8, '#d0d0d0'); cueGradient.addColorStop(1, '#a0a0a0');
+                    ctx.fillStyle = cueGradient; ctx.fill();
+                    if (this.equatorX.z > 0) { ctx.save(); ctx.transform(eqY.x, eqY.y, -this.pole.x, -this.pole.y, this.equatorX.x * this.radius, this.equatorX.y * this.radius); ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(0, 0, this.radius * 0.2, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
+                    if (-this.equatorX.z > 0) { ctx.save(); ctx.transform(-eqY.x, -eqY.y, -this.pole.x, -this.pole.y, -this.equatorX.x * this.radius, -this.equatorX.y * this.radius); ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(0, 0, this.radius * 0.2, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
+                } else {
+                    ctx.fillStyle = '#111'; ctx.fill(); 
+                    if (!this.isCue && this.number > 8 && this.number < 16) {
+                        ctx.fillStyle = '#fdffe0'; ctx.fill();
+                        ctx.fillStyle = this.color; ctx.fillRect(-this.radius, -this.radius, this.radius*2, this.radius*2);
+                        let capDist = 0.55; let capRad = Math.sqrt(1 - capDist*capDist); 
+                        if (this.pole.z > -0.2) { ctx.save(); ctx.transform(this.equatorX.x, this.equatorX.y, eqY.x, eqY.y, this.pole.x * capDist * this.radius, this.pole.y * capDist * this.radius); ctx.beginPath(); ctx.arc(0, 0, this.radius * capRad, 0, Math.PI*2); ctx.fillStyle = '#fdffe0'; ctx.fill(); ctx.restore(); }
+                        if (this.pole.z < 0.2) { ctx.save(); ctx.transform(-this.equatorX.x, -this.equatorX.y, eqY.x, eqY.y, -this.pole.x * capDist * this.radius, -this.pole.y * capDist * this.radius); ctx.beginPath(); ctx.arc(0, 0, this.radius * capRad, 0, Math.PI*2); ctx.fillStyle = '#fdffe0'; ctx.fill(); ctx.restore(); }
+                    } else { ctx.fillStyle = this.color; ctx.fill(); }
+
+                    let sphereGradient = ctx.createRadialGradient(-this.radius * 0.3, -this.radius * 0.3, 0, 0, 0, this.radius);
+                    sphereGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)'); sphereGradient.addColorStop(0.3, 'rgba(255, 255, 255, 0)'); sphereGradient.addColorStop(0.8, 'rgba(0, 0, 0, 0.35)'); sphereGradient.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+                    ctx.fillStyle = sphereGradient; ctx.fill();
+
+                    if (this.equatorX.z > -0.1) { ctx.save(); ctx.transform(eqY.x, eqY.y, -this.pole.x, -this.pole.y, this.equatorX.x * this.radius, this.equatorX.y * this.radius); ctx.beginPath(); ctx.arc(0, 0, this.radius * 0.55, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.fillStyle = '#111111'; ctx.font = `bold ${this.radius * 0.8}px 'Segoe UI'`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(this.number, 0, 1.2); ctx.restore(); }
+                    if (this.equatorX.z < 0.1) { ctx.save(); ctx.transform(-eqY.x, -eqY.y, -this.pole.x, -this.pole.y, -this.equatorX.x * this.radius, -this.equatorX.y * this.radius); ctx.beginPath(); ctx.arc(0, 0, this.radius * 0.55, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.fillStyle = '#111111'; ctx.font = `bold ${this.radius * 0.8}px 'Segoe UI'`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(this.number, 0, 1.2); ctx.restore(); }
+                }
+
+                let glossGradient = ctx.createRadialGradient(-this.radius * 0.4, -this.radius * 0.4, 0, -this.radius * 0.3, -this.radius * 0.3, this.radius * 0.9);
+                glossGradient.addColorStop(0, 'rgba(255, 255, 255, 0.85)'); glossGradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.25)'); glossGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = glossGradient; ctx.fillRect(-this.radius, -this.radius, this.radius*2, this.radius*2);
+                
+                if (this.isPocketing) { let darkness = Math.max(0, Math.min(1, -this.z / 25)); ctx.fillStyle = `rgba(0,0,0, ${darkness})`; ctx.fillRect(-this.radius, -this.radius, this.radius*2, this.radius*2); }
+                ctx.restore();
+            }
+
+            updatePhysics() {
+                if (!this.active) return;
+                if (this.isPocketing) {
+                    this.vx *= 0.7; this.vy *= 0.7; let dx = this.targetPocket.x - this.x; let dy = this.targetPocket.y - this.y;
+                    this.x += dx * 0.15; this.y += dy * 0.15; this.vz -= GRAVITY * 0.6; this.z += this.vz;
+                    let spinTheta = 0.2; rotZ(this.pole, spinTheta); rotZ(this.equatorX, spinTheta); normalize(this.pole); normalize(this.equatorX);
+                    if (this.z < -40) { 
+                        this.active = false; this.isPocketing = false; this.vx = 0; this.vy = 0; this.vz = 0; this.z = 0;
+                        if (this.isCue) cueBallScratchedThisShot = true; else pocketedBallsThisShot.push({ ball: this, pocketIndex: this.pocketIndex }); 
+                    } return; 
+                }
+                if (!isFinite(this.x) || !isFinite(this.y) || !isFinite(this.vx) || !isFinite(this.vy)) { this.x = TABLE_WIDTH/2; this.y = TABLE_HEIGHT/2; this.vx = 0; this.vy = 0; this.vz = 0; this.z = 0; this.spinEnergyX = 0; this.spinEnergyY = 0; this.sideSpin = 0;}
+                
+                if (this.z > 0 || this.vz !== 0) { 
+                    this.vz -= GRAVITY / SUB_STEPS; this.z += this.vz / SUB_STEPS; 
+                    if (this.z < 0) { this.z = 0; this.vz *= -0.5; if (Math.abs(this.vz) < 1.0) this.vz = 0; playHitSound(Math.abs(this.vz) * 2); } 
+                }
+                
+                if (this.isCue && this.hasHitObject && (Math.abs(this.spinEnergyX)>0.1 || Math.abs(this.spinEnergyY)>0.1)) { this.vx -= this.spinEnergyX * DRAW_FOLLOW_STRENGTH; this.vy -= this.spinEnergyY * DRAW_FOLLOW_STRENGTH; }
+                this.spinEnergyX *= SPIN_DECAY; this.spinEnergyY *= SPIN_DECAY; this.sideSpin *= SPIN_DECAY;
+                let currentFriction = (this.z > 0.5) ? 1.0 : STEP_FRICTION; 
+                this.x += this.vx / SUB_STEPS; this.y += this.vy / SUB_STEPS;
+                this.vx *= currentFriction; this.vy *= currentFriction;
+                this.vx = Math.max(-80, Math.min(80, this.vx)); this.vy = Math.max(-80, Math.min(80, this.vy)); 
+                let moveDist = Math.hypot(this.vx, this.vy) / SUB_STEPS;
+                if (moveDist > 0.0001 && this.z <= 0) { 
+                    let kx = -this.vy / (moveDist * SUB_STEPS); let ky = this.vx / (moveDist * SUB_STEPS); let kLen = Math.hypot(kx, ky); kx /= kLen; ky /= kLen;
+                    let theta = moveDist / this.radius; rotVector(this.pole, kx, ky, theta); rotVector(this.equatorX, kx, ky, theta);
+                }
+                if (Math.abs(this.sideSpin) > 0.001) { let spinTheta = this.sideSpin * 0.01 / SUB_STEPS; rotZ(this.pole, spinTheta); rotZ(this.equatorX, spinTheta); }
+                normalize(this.pole); normalize(this.equatorX);
+                if (Math.abs(this.vx) < 0.015) this.vx = 0; if (Math.abs(this.vy) < 0.015) this.vy = 0;
+                let isNearPocket = false;
+                for (let p of pockets) { if (Math.hypot(this.x - p.x, this.y - p.y) < POCKET_RADIUS * 1.5) { isNearPocket = true; break; } }
+                if (!isNearPocket) {
+                    let hitWall = false; let speedBeforeHit = Math.hypot(this.vx, this.vy); let isJumpingOverCushion = this.z > 8; 
+                    if (!isJumpingOverCushion) {
+                        if (this.x - this.radius < CUSHION_WIDTH) { this.x = CUSHION_WIDTH + this.radius; if (this.vx < 0) { this.vx *= -CUSHION_BOUNCE; hitWall = true; this.vy += this.sideSpin * CUSHION_SPIN_STRENGTH; this.sideSpin *= 0.5; } } 
+                        else if (this.x + this.radius > TABLE_WIDTH - CUSHION_WIDTH) { 
+                            this.x = TABLE_WIDTH - CUSHION_WIDTH - this.radius; 
+                            this.hitRightCushion = true;
+                            if (this.vx > 0) { this.vx *= -CUSHION_BOUNCE; hitWall = true; this.vy -= this.sideSpin * CUSHION_SPIN_STRENGTH; this.sideSpin *= 0.5; } 
+                        }
+                        if (this.y - this.radius < CUSHION_WIDTH) { this.y = CUSHION_WIDTH + this.radius; if (this.vy < 0) { this.vy *= -CUSHION_BOUNCE; hitWall = true; this.vx += this.sideSpin * CUSHION_SPIN_STRENGTH; this.sideSpin *= 0.5; } } 
+                        else if (this.y + this.radius > TABLE_HEIGHT - CUSHION_WIDTH) { this.y = TABLE_HEIGHT - CUSHION_WIDTH - this.radius; if (this.vy > 0) { this.vy *= -CUSHION_BOUNCE; hitWall = true; this.vx -= this.sideSpin * CUSHION_SPIN_STRENGTH; this.sideSpin *= 0.5; } }
+                        if (hitWall) playHitSound(speedBeforeHit * 0.6); 
+                    }
+                }
+            }
+        }
+
+        function drawTableLayout() {
+            if (feltImage.src && feltImage.complete) { ctx.drawImage(feltImage, 0, 0, TABLE_WIDTH, TABLE_HEIGHT); } else {
+                let feltGradient = ctx.createRadialGradient(TABLE_WIDTH/2, TABLE_HEIGHT/2, 20, TABLE_WIDTH/2, TABLE_HEIGHT/2, TABLE_WIDTH/1.1);
+                feltGradient.addColorStop(0, '#2aab64'); feltGradient.addColorStop(0.7, '#146438'); feltGradient.addColorStop(1, '#09381e');
+                ctx.fillStyle = feltGradient; ctx.fillRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
+            }
+            let woodGradientV = ctx.createLinearGradient(0, 0, CUSHION_WIDTH, 0); woodGradientV.addColorStop(0, '#2e1b0f'); woodGradientV.addColorStop(0.5, '#4a2c19'); woodGradientV.addColorStop(1, '#1b0f08');
+            let woodGradientH = ctx.createLinearGradient(0, 0, 0, CUSHION_WIDTH); woodGradientH.addColorStop(0, '#2e1b0f'); woodGradientH.addColorStop(0.5, '#4a2c19'); woodGradientH.addColorStop(1, '#1b0f08');
+            ctx.fillStyle = woodGradientH; ctx.fillRect(0, 0, TABLE_WIDTH, CUSHION_WIDTH); ctx.fillRect(0, TABLE_HEIGHT - CUSHION_WIDTH, TABLE_WIDTH, CUSHION_WIDTH); 
+            ctx.fillStyle = woodGradientV; ctx.fillRect(0, 0, CUSHION_WIDTH, TABLE_HEIGHT); ctx.fillRect(TABLE_WIDTH - CUSHION_WIDTH, 0, CUSHION_WIDTH, TABLE_HEIGHT); 
+            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CUSHION_WIDTH, CUSHION_WIDTH, TABLE_WIDTH-CUSHION_WIDTH*2, 6); ctx.fillRect(CUSHION_WIDTH, CUSHION_WIDTH, 6, TABLE_HEIGHT-CUSHION_WIDTH*2); 
+            ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(CUSHION_WIDTH, TABLE_HEIGHT - CUSHION_WIDTH - 2, TABLE_WIDTH-CUSHION_WIDTH*2, 2); ctx.fillRect(TABLE_WIDTH - CUSHION_WIDTH - 2, CUSHION_WIDTH, 2, TABLE_HEIGHT-CUSHION_WIDTH*2); 
+            ctx.fillStyle = '#ecf0f1'; let dX = TABLE_WIDTH / 8; let dY = TABLE_HEIGHT / 4;
+            for(let i=1; i<8; i++) { if(i!==4) { ctx.beginPath(); ctx.arc(i*dX, CUSHION_WIDTH/2, 3.5, 0, Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.arc(i*dX, CUSHION_WIDTH/2+1, 3.5, 0, Math.PI*2); ctx.fill(); ctx.fillStyle='#ecf0f1'; ctx.beginPath(); ctx.arc(i*dX, TABLE_HEIGHT - CUSHION_WIDTH/2, 3.5, 0, Math.PI*2); ctx.fill(); } }
+            for(let i=1; i<4; i++) { if(i!==2) { ctx.beginPath(); ctx.arc(CUSHION_WIDTH/2, i*dY, 3.5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(TABLE_WIDTH - CUSHION_WIDTH/2, i*dY, 3.5, 0, Math.PI*2); ctx.fill(); } }
+        }
+
+        function drawPockets() {
+            pockets.forEach((p, index) => {
+                ctx.beginPath(); ctx.arc(p.x, p.y, POCKET_RADIUS + 5, 0, Math.PI * 2); 
+                let rimGradient = ctx.createLinearGradient(p.x - POCKET_RADIUS, p.y - POCKET_RADIUS, p.x + POCKET_RADIUS, p.y + POCKET_RADIUS);
+                rimGradient.addColorStop(0, '#555'); rimGradient.addColorStop(0.5, '#aaa'); rimGradient.addColorStop(1, '#222'); ctx.fillStyle = rimGradient; ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x, p.y, POCKET_RADIUS + 2, 0, Math.PI * 2); ctx.fillStyle = '#2c3e50'; ctx.fill();
+                let dropGradient = ctx.createRadialGradient(p.x, p.y, POCKET_RADIUS * 0.15, p.x, p.y, POCKET_RADIUS);
+                dropGradient.addColorStop(0, '#000000'); dropGradient.addColorStop(0.7, '#070707'); dropGradient.addColorStop(1, 'rgba(0,0,0,0.85)');
+                ctx.beginPath(); ctx.arc(p.x, p.y, POCKET_RADIUS, 0, Math.PI * 2); ctx.fillStyle = dropGradient; ctx.fill();
+                ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(0,0,0,0.95)'; ctx.stroke(); ctx.closePath();
+
+                if ((gameMode === '10ball' || (gameMode === '8ball' && lowestBallTarget === 8)) && calledPocket === index && isCueBallStopped) {
+                    ctx.beginPath(); ctx.arc(p.x, p.y, POCKET_RADIUS + 10, 0, Math.PI * 2); ctx.strokeStyle = '#00b894'; ctx.lineWidth = 4; ctx.setLineDash([6, 6]); ctx.stroke(); ctx.setLineDash([]);
+                }
+            });
+        }
+
+        function checkPockets() {
+            if (matchPhase === 'LAG') return; 
+            balls.forEach(ball => {
+                if (!ball.active || ball.isPocketing) return;
+                if (ball.isCue && isDraggingCueBall) return;
+                if (ball.x < -BALL_RADIUS || ball.x > TABLE_WIDTH + BALL_RADIUS || ball.y < -BALL_RADIUS || ball.y > TABLE_HEIGHT + BALL_RADIUS) {
+                    ball.active = false; ball.vx = 0; ball.vy = 0; ball.vz = 0; ball.z = 0;
+                    if (ball.isCue) { cueBallScratchedThisShot = true; cueBallOffTableThisShot = true; } else { pocketedBallsThisShot.push({ ball: ball, pocketIndex: -1 }); objectBallOffTableThisShot = true; } return; 
+                }
+                for (let i = 0; i < pockets.length; i++) {
+                    let pocket = pockets[i]; const dist = Math.hypot(ball.x - pocket.x, ball.y - pocket.y);
+                    if (dist < POCKET_RADIUS * 1.3) { ball.vx += (pocket.x - ball.x) * 0.08; ball.vy += (pocket.y - ball.y) * 0.08; } 
+                    if (dist < POCKET_RADIUS - 2) { ball.isPocketing = true; ball.targetPocket = pocket; ball.pocketIndex = i; ball.vz = -2; break; }
+                }
+            });
+        }
+
+        function resolveCollision(b1, b2) {
+            if (!b1.active || !b2.active || b1.isPocketing || b2.isPocketing) return; 
+            if (isDraggingCueBall && (b1.isCue || b2.isCue)) return;
+            if (Math.abs(b1.z - b2.z) > BALL_RADIUS * 1.5) return; 
+            const dx = b2.x - b1.x; const dy = b2.y - b1.y; let distance = Math.hypot(dx, dy);
+            if (distance === 0) { b2.x += 0.1; distance = 0.1; }
+            if (distance < b1.radius + b2.radius) {
+                const overlap = b1.radius + b2.radius - distance; const nx = dx / distance; const ny = dy / distance;
+                b1.x -= nx * (overlap / 2); b1.y -= ny * (overlap / 2); b2.x += nx * (overlap / 2); b2.y += ny * (overlap / 2);
+                const vrx = b1.vx - b2.vx; const vry = b1.vy - b2.vy; const velAlongNormal = vrx * nx + vry * ny;
+                if (velAlongNormal <= 0) return; 
+                const j = -(1 + BALL_RESTITUTION) * velAlongNormal / (1/b1.mass + 1/b2.mass);
+                b1.vx += (j * nx) / b1.mass; b1.vy += (j * ny) / b1.mass; b2.vx -= (j * nx) / b2.mass; b2.vy -= (j * ny) / b2.mass;
+                playHitSound(velAlongNormal);
+                
+                if (b1.isCue && !b1.hasHitObject && firstHitBall === null) {
+                    firstHitBall = b2;
+                    if (shotInitiatedByMe && isOnline) sendNetworkData({ type: 'SYNC_FIRST_HIT', id: b2.number });
+                }
+                if (b2.isCue && !b2.hasHitObject && firstHitBall === null) {
+                    firstHitBall = b1;
+                    if (shotInitiatedByMe && isOnline) sendNetworkData({ type: 'SYNC_FIRST_HIT', id: b1.number });
+                }
+
+                if (b1.isCue) b1.hasHitObject = true; if (b2.isCue) b2.hasHitObject = true;
+            }
+        }
+
+        function showFoulPopup(msg, callback) {
+            isFoulAnimating = true; foulDesc.innerHTML = msg || "Bi cái cầm tay."; foulPopup.className = 'show';
+            setTimeout(() => { foulPopup.className = ''; isFoulAnimating = false; if (callback) callback(); }, 3200);
+        }
+
+        modeSelect.addEventListener('change', (e) => { 
+            gameMode = e.target.value; resetGame(true); 
+            if(isOnline && isHost) sendNetworkData({ type: 'SYNC_GAME_RESTART', mode: gameMode, hostTurn: true });
+        });
+
+        function resetTimer(isLag = false) {
+            turnTimeLeft = isLag ? 45 : 30;
+            lastTimeTick = Date.now();
+            updateTimerUI();
+        }
+
+        function updateTimerUI() {
+            turnTimerDisplay.innerText = `⏱ ${turnTimeLeft}s`;
+            if (turnTimeLeft <= 5) {
+                turnTimerDisplay.style.color = '#d63031';
+                turnTimerDisplay.style.borderColor = '#d63031';
+            } else if (turnTimeLeft <= 10) {
+                turnTimerDisplay.style.color = '#f1c40f';
+                turnTimerDisplay.style.borderColor = '#f1c40f';
+            } else {
+                turnTimerDisplay.style.color = '#00b894';
+                turnTimerDisplay.style.borderColor = 'rgba(255,255,255,0.2)';
+            }
+        }
+
+        function updateTimerLogic() {
+            if (!isMatchStarted) {
+                turnTimerDisplay.style.display = 'none';
+                return;
+            }
+            
+            let isPlayable = isCueBallStopped && !isFoulAnimating && !isStroking && !shotInProgress;
+            
+            if (matchPhase === 'LAG') {
+                let myLagDone = isHost ? lagHostShot : lagClientShot;
+                if (!myLagDone) {
+                    turnTimerDisplay.style.display = 'inline-block';
+                    let now = Date.now();
+                    if (now - lastTimeTick >= 1000) {
+                        turnTimeLeft--;
+                        lastTimeTick = now;
+                        updateTimerUI();
+                        if (turnTimeLeft <= 0) {
+                            executeLagShot(0.1, isHost); 
+                            sendNetworkData({ type: 'SYNC_LAG_SHOOT', power: 0.1, isHost: isHost });
+                        }
+                    }
+                } else {
+                    turnTimerDisplay.style.display = 'none';
+                }
+            } else {
+                if (isPlayable && (!isOnline || isMyTurn)) {
+                    turnTimerDisplay.style.display = 'inline-block';
+                    let now = Date.now();
+                    if (now - lastTimeTick >= 1000) {
+                        turnTimeLeft--;
+                        lastTimeTick = now;
+                        updateTimerUI();
+                        if (turnTimeLeft <= 0) {
+                            turnTimerDisplay.style.display = 'none';
+                            triggerFoul("Hết giờ!");
+                            if (isOnline) {
+                                isMyTurn = false;
+                                sendNetworkData({ type: 'PASS_TURN', reason: 'timeout' });
+                                updateTurnUI();
+                            }
+                            resetTimer();
+                        }
+                    }
+                } else {
+                    turnTimerDisplay.style.display = 'none';
+                }
+            }
+        }
+
+        function startLagPhase() {
+            matchPhase = 'LAG';
+            isMatchStarted = true;
+            document.getElementById('readyPanel').style.display = 'none';
+            hostScore = 0; clientScore = 0; updateScoreUI();
+            
+            balls = [];
+            let startX = CUSHION_WIDTH + BALL_RADIUS + 2; 
+
+            hostBall = new Ball(startX, TABLE_HEIGHT/2 - 50, colorMap[2], false, 2); 
+            clientBall = new Ball(startX, TABLE_HEIGHT/2 + 50, colorMap[3], false, 3);
+            balls.push(hostBall); balls.push(clientBall);
+            
+            cueBall = isHost ? hostBall : clientBall;
+            isCueBallStopped = true;
+            lagHostShot = false; lagClientShot = false; lagResolved = false;
+            
+            aimSlider.value = 0; aimSlider.disabled = true;
+            elevationSlider.value = 0; elevationSlider.disabled = true;
+            powerSlider.value = 0;
+            
+            targetDisplay.innerHTML = "GIÀNH LƯỢT BẮN";
+            targetDisplay.style.backgroundColor = "#e17055";
+            
+            turnIndicator.innerText = "GIÀNH LƯỢT BẮN";
+            turnIndicator.className = "turn-mine";
+            resetTimer(true);
+            updateTurnUI();
+        }
+
+        function executeLagShot(power, isHostShooter) {
+            let b = isHostShooter ? hostBall : clientBall;
+            let force = (power / 100) * 50;
+            b.vx = force; b.vy = 0; b.vz = 0;
+            playHitSound(force);
+            shotInProgress = true;
+            if (isHostShooter) lagHostShot = true;
+            else lagClientShot = true;
+            turnTimerDisplay.style.display = 'none';
+        }
+
+        function resetGame(isHostTurn = true) {
+            matchPhase = isOnline ? 'PLAY' : 'PRACTICE';
+            
+            hostExtensionUsed = false;
+            clientExtensionUsed = false;
+            btnExtendTimer.disabled = true;
+            
+            balls = []; cueBall = new Ball(200, TABLE_HEIGHT / 2, '#fdffe0', true, 0); balls.push(cueBall); 
+            const startX = 550; const startY = TABLE_HEIGHT / 2; const r = BALL_RADIUS; const d = r * 1.85; const h = r * 1.05; 
+            function addBall(col, rowOffset, num) { balls.push(new Ball(startX + col * d, startY + rowOffset * h, colorMap[num], false, num)); }
+
+            if (gameMode === '8ball') {
+                let nums = [1,9,2,10,8,3,11,4,12,5,13,6,14,7,15]; let idx=0;
+                for (let col = 0; col < 5; col++) { for (let row = 0; row <= col; row++) { let rowOffset = -(col) + (row * 2); addBall(col, rowOffset, nums[idx++]); } }
+            } else if (gameMode === '9ball') { addBall(0, 0, 1); addBall(1, -1, 2); addBall(1, 1, 3); addBall(2, -2, 4); addBall(2, 0, 9); addBall(2, 2, 5); addBall(3, -1, 6); addBall(3, 1, 7); addBall(4, 0, 8); } 
+            else if (gameMode === '10ball') { addBall(0, 0, 1); addBall(1, -1, 2); addBall(1, 1, 3); addBall(2, -2, 4); addBall(2, 0, 10); addBall(2, 2, 5); addBall(3, -3, 6); addBall(3, -1, 7); addBall(3, 1, 8); addBall(3, 3, 9); } 
+            else if (gameMode === '7ball') { addBall(0, 0, 1); addBall(1, -1, 2); addBall(1, 1, 3); addBall(2, -2, 4); addBall(2, 0, 7); addBall(2, 2, 5); addBall(3, 0, 6); }
+            
+            isBreakShot = true; isBallInHand = true; shotInProgress = false; calledPocket = null; playerGroup = null; currentMiscueMsg = null;
+            isStroking = false; pendingShot = null;
+            updateLowestTarget(); powerSlider.value = 0; elevationSlider.value = 0; spinX = 0; spinY = 0; updateSpinUI();
+            if(document.getElementById('cueBreak')) document.getElementById('cueBreak').click();
+            
+            if (isOnline) { 
+                isMyTurn = isHost ? isHostTurn : !isHostTurn; 
+                updateTurnUI(); 
+            } else {
+                isMyTurn = true;
+            }
+            
+            resetTimer();
+        }
+
+        function getBallGraphicHTML(num) {
+            if (!num) return ''; let clr = colorMap[num] || '#fff';
+            if (num > 8 && num < 16) return `<div class="target-ball-graphic striped-ball" style="--ball-color: ${clr}"><span>${num}</span></div>`;
+            else return `<div class="target-ball-graphic solid-ball" style="--ball-color: ${clr}; background: ${clr}"><span>${num}</span></div>`;
+        }
+
+        function updateLowestTarget() {
+            if (matchPhase === 'LAG') return;
+            let activeColorBalls = balls.filter(b => !b.isCue && b.active).map(b => b.number);
+            if (activeColorBalls.length === 0) { targetDisplay.innerHTML = "ĐÃ THẮNG!"; targetDisplay.style.backgroundColor = "#00b894"; return; }
+            let txt = ""; let visual = "";
+            if (gameMode === '8ball') {
+                let remainingTargetBalls = playerGroup === 'solids' ? activeColorBalls.filter(n => n >= 1 && n <= 7) : (playerGroup === 'stripes' ? activeColorBalls.filter(n => n >= 9 && n <= 15) : []);
+                if (playerGroup !== null && remainingTargetBalls.length === 0 && activeColorBalls.includes(8)) { lowestBallTarget = 8; txt = `Bi 8` + (calledPocket !== null ? " (gọi)" : ""); targetDisplay.style.backgroundColor = calledPocket !== null ? "#00b894" : "#d63031"; visual = getBallGraphicHTML(8); } 
+                else { lowestBallTarget = null; if (playerGroup === null) { txt = "Bàn Mở"; targetDisplay.style.backgroundColor = "#0984e3"; } else if (playerGroup === 'solids') { txt = "BI TRƠN"; targetDisplay.style.backgroundColor = "#e17055"; } else if (playerGroup === 'stripes') { txt = "BI SỌC"; targetDisplay.style.backgroundColor = "#6c5ce7"; } }
+            } else {
+                lowestBallTarget = Math.min(...activeColorBalls); txt = `Bi ${lowestBallTarget}`;
+                if (gameMode === '10ball' && !isBreakShot) { txt += calledPocket !== null ? " (gọi)" : ""; targetDisplay.style.backgroundColor = calledPocket !== null ? "#00b894" : "#d63031"; } else { targetDisplay.style.backgroundColor = "#d63031"; }
+                visual = getBallGraphicHTML(lowestBallTarget);
+            }
+            targetDisplay.innerHTML = txt + visual;
+        }
+
+        function triggerFoul(msg) {
+            showFoulPopup(msg, () => {
+                isBallInHand = true; 
+                if (!cueBall.active || cueBall.isPocketing) { 
+                    cueBall.isPocketing = false; 
+                    cueBall.active = true;       
+                    cueBall.x = 200; cueBall.y = TABLE_HEIGHT / 2; cueBall.z = 0; 
+                    cueBall.vx = 0; cueBall.vy = 0; cueBall.vz = 0; 
+                    cueBall.spinEnergyX = 0; cueBall.spinEnergyY = 0; 
+                } 
+                calledPocket = null; updateLowestTarget();
+            }); 
+        }
+
+        function getSafeTouchPos(e) { if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY }; if (e.changedTouches && e.changedTouches.length > 0) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }; if (e.clientX !== undefined) return { x: e.clientX, y: e.clientY }; return null; }
+
+        function updateSpin(e) {
+            if(!isDraggingSpin || isFoulAnimating || (isOnline && !isMyTurn) || matchPhase === 'LAG') return;
+            const pos = getSafeTouchPos(e); if (!pos) return; 
+            const rect = spinTarget.getBoundingClientRect(); 
+            let x = pos.x - rect.left - rect.width / 2; 
+            let y = pos.y - rect.top - rect.height / 2; 
+            let radius = rect.width / 2; if (radius === 0) return; 
+            let dist = Math.hypot(x, y); if (dist > radius) { x = (x / dist) * radius; y = (y / dist) * radius; }
+            spinX = x / radius; spinY = y / radius; updateSpinUI(); sendNetworkData({ type: 'SYNC_SPIN', x: spinX, y: spinY });
+        }
+
+        function updateSpinUI() {
+            let rect = spinTarget.getBoundingClientRect();
+            spinDot.style.left = `${(spinX * rect.width/2 + rect.width/2) / rect.width * 100}%`; spinDot.style.top = `${(spinY * rect.height/2 + rect.height/2) / rect.height * 100}%`;
+        }
+
+        spinTarget.addEventListener('mousedown', (e) => { isDraggingSpin = true; updateSpin(e); }); window.addEventListener('mousemove', updateSpin); window.addEventListener('mouseup', () => { isDraggingSpin = false; });
+        spinTarget.addEventListener('touchstart', (e) => { if(!isFoulAnimating) { isDraggingSpin = true; updateSpin(e); } }, { passive: false }); window.addEventListener('touchmove', (e) => { if(isDraggingSpin) { e.preventDefault(); updateSpin(e); } }, { passive: false }); window.addEventListener('touchmove', (e) => { if(isDraggingSpin) e.preventDefault(); }, { passive: false }); window.addEventListener('touchend', () => { isDraggingSpin = false; });
+
+        document.getElementById('btnLeft').addEventListener('click', () => { if(matchPhase==='LAG')return; aimSlider.value = (parseFloat(aimSlider.value) || 0) - 0.2; sendNetworkData({ type: 'SYNC_AIM', aim: aimSlider.value }); }); 
+        document.getElementById('btnRight').addEventListener('click', () => { if(matchPhase==='LAG')return; aimSlider.value = (parseFloat(aimSlider.value) || 0) + 0.2; sendNetworkData({ type: 'SYNC_AIM', aim: aimSlider.value }); });
+        aimSlider.addEventListener('input', () => { sendNetworkData({ type: 'SYNC_AIM', aim: aimSlider.value }); });
+
+        function getPointerPos(e) { 
+            const rect = canvas.getBoundingClientRect(); 
+            const scaleX = TABLE_WIDTH / rect.width; 
+            const scaleY = TABLE_HEIGHT / rect.height; 
+            const pos = getSafeTouchPos(e); 
+            if (!pos) return null; 
+            return { x: (pos.x - rect.left) * scaleX, y: (pos.y - rect.top) * scaleY }; 
+        }
+
+        const startDragAim = (e) => { 
+            if (matchPhase === 'LAG') return;
+            if(isCueBallStopped && cueBall.active && !isFoulAnimating && (!isOnline || isMyTurn)) {
+                const pos = getPointerPos(e); if (!pos) return;
+                if ((gameMode === '10ball' && !isBreakShot) || (gameMode === '8ball' && lowestBallTarget === 8)) {
+                    let clickedPocket = false;
+                    for (let i = 0; i < pockets.length; i++) { if (Math.hypot(pockets[i].x - pos.x, pockets[i].y - pos.y) < POCKET_RADIUS * 3) { calledPocket = i; clickedPocket = true; e.preventDefault(); updateLowestTarget(); sendNetworkData({ type: 'SYNC_POCKET_CALL', pocket: calledPocket }); break; } }
+                    if (clickedPocket) return; 
+                }
+                const distToCue = Math.hypot(cueBall.x - pos.x, cueBall.y - pos.y);
+                if (isBallInHand && distToCue < BALL_RADIUS * 3.2) { isDraggingCueBall = true; e.preventDefault(); } else { isDraggingAim = true; lastPointerX = pos.x; lastPointerY = pos.y; e.preventDefault(); }
+            }
+        };
+
+        const moveDragAim = (e) => {
+            if (matchPhase === 'LAG') return;
+            if (!isCueBallStopped || isFoulAnimating || (isOnline && !isMyTurn)) return;
+            const pos = getPointerPos(e); if (!pos) return;
+            if (isDraggingCueBall) {
+                e.preventDefault(); 
+                if (isBreakShot) { const breakLineX = TABLE_WIDTH / 3; cueBall.x = Math.max(CUSHION_WIDTH + BALL_RADIUS, Math.min(pos.x, breakLineX)); } else { cueBall.x = Math.max(CUSHION_WIDTH + BALL_RADIUS, Math.min(pos.x, TABLE_WIDTH - CUSHION_WIDTH - BALL_RADIUS)); }
+                cueBall.y = Math.max(CUSHION_WIDTH + BALL_RADIUS, Math.min(pos.y, TABLE_HEIGHT - CUSHION_WIDTH - BALL_RADIUS));
+                sendNetworkData({ type: 'SYNC_CUE_POS', x: cueBall.x, y: cueBall.y });
+            } else if(isDraggingAim) {
+                e.preventDefault(); 
+                let startAngle = Math.atan2(lastPointerY - cueBall.y, lastPointerX - cueBall.x); let currentAngle = Math.atan2(pos.y - cueBall.y, pos.x - cueBall.x); let angleDiff = currentAngle - startAngle;
+                let currentAim = parseFloat(aimSlider.value) || 0; let newAim = currentAim + angleDiff * (180 / Math.PI);
+                if (newAim < 0) newAim += 360; if (newAim >= 360) newAim -= 360;
+                aimSlider.value = newAim; lastPointerX = pos.x; lastPointerY = pos.y; sendNetworkData({ type: 'SYNC_AIM', aim: aimSlider.value });
+            }
+        };
+        const endDragAim = () => { 
+            isDraggingAim = false; 
+            if (isDraggingCueBall) {
+                isDraggingCueBall = false;
+                sendNetworkData({ type: 'SYNC_CUE_POS', x: cueBall.x, y: cueBall.y });
+            }
+        };
+
+        canvas.addEventListener('mousedown', startDragAim); window.addEventListener('mousemove', moveDragAim); window.addEventListener('mouseup', endDragAim);
+        canvas.addEventListener('touchstart', startDragAim, { passive: false }); window.addEventListener('touchmove', moveDragAim, { passive: false }); window.addEventListener('touchmove', (e) => { if(isDraggingAim || isDraggingCueBall) e.preventDefault(); }, { passive: false }); window.addEventListener('touchend', endDragAim);
+
+        function executeShotLocally(power, aimVal, elevVal, spX, spY, cueTypeStr) {
+            isBallInHand = false; shotInProgress = true; firstHitBall = null; pocketedBallsThisShot = []; cueBallScratchedThisShot = false; cueBallOffTableThisShot = false; objectBallOffTableThisShot = false;
+            let aimAngle = (parseFloat(aimVal) || 0) * (Math.PI / 180); let elevationAngle = (parseFloat(elevVal) || 0) * (Math.PI / 180); let force = (power / 100) * 50; 
+            let forceXY = force; let forceZ = 0; let dirForce = forceXY; let isMiscue = false; let miscueMsg = "Tạch cơ!";
+
+            if (isBreakShot && cueTypeStr !== 'break') { isMiscue = true; miscueMsg = "Tạch cơ! Dùng Gậy Phá để phá bi."; } 
+            else if (elevationAngle > 0 && cueTypeStr !== 'jump') { isMiscue = true; miscueMsg = "Tạch cơ! Dùng Gậy Nhảy để cắm bi."; }
+
+            if (isMiscue) { forceXY = force * 0.05; forceZ = 0; spX = 0; spY = 0; dirForce = forceXY; currentMiscueMsg = miscueMsg; } else {
+                currentMiscueMsg = null;
+                if (cueTypeStr === 'break') { if (isBreakShot) { forceXY = force * 1.8; forceZ = 0; spX *= 0.2; spY *= 0.2; dirForce = forceXY; } else { forceXY = force * 0.6; forceZ = 0; spX *= 0.2; spY *= 0.2; dirForce = forceXY; } } 
+                else if (cueTypeStr === 'jump') { let jumpElev = Math.max(0, elevationAngle); if (jumpElev > 0) { forceXY = force * Math.cos(jumpElev) * 0.75; forceZ = force * Math.sin(jumpElev) * 2.8; dirForce = forceXY; } else { forceXY = force * 0.4; forceZ = 0; dirForce = forceXY; } } 
+                else { forceXY = force; forceZ = 0; dirForce = forceXY; }
+            }
+
+            cueBall.vx = Math.cos(aimAngle) * forceXY; cueBall.vy = Math.sin(aimAngle) * forceXY; cueBall.vz = forceZ; 
+            cueBall.shotDirX = Math.cos(aimAngle); cueBall.shotDirY = Math.sin(aimAngle); 
+            cueBall.spinEnergyX = cueBall.shotDirX * dirForce * spY; cueBall.spinEnergyY = cueBall.shotDirY * dirForce * spY; cueBall.sideSpin = dirForce * spX * 0.2; cueBall.hasHitObject = false; 
+            playHitSound(force); powerSlider.value = 0; 
+            turnTimerDisplay.style.display = 'none';
+        }
+
+        shootBtn.addEventListener('click', () => {
+            let power = parseFloat(powerSlider.value) || 0;
+            if (power > 0 && !isFoulAnimating) {
+                if (matchPhase === 'LAG') {
+                    let myLagShotDone = isHost ? lagHostShot : lagClientShot;
+                    if (!myLagShotDone) {
+                        sendNetworkData({ type: 'SYNC_LAG_SHOOT', power: power, isHost: isHost });
+                        startStrokeAnimation(power, 0, 0, 0, 0, 'play', true);
+                    }
+                    return;
+                }
+
+                if (isCueBallStopped && cueBall.active && (!isOnline || isMyTurn)) {
+                    shotInitiatedByMe = true;
+                    sendNetworkData({ 
+                        type: 'SYNC_SHOOT', 
+                        power: power, aim: aimSlider.value, elev: elevationSlider.value, 
+                        spinX: spinX, spinY: spinY, cueType: currentCueType,
+                        cueX: cueBall.x, cueY: cueBall.y
+                    });
+                    startStrokeAnimation(power, aimSlider.value, elevationSlider.value, spinX, spinY, currentCueType, false);
+                }
+            }
+        });
+
+        let peer = null; let conn = null; let isOnline = false; let isHost = false; let isMyTurn = true; 
+        let hostScore = 0; let clientScore = 0; let hostName = "HOST"; let clientName = "GUEST";
+
+        const customRoomInput = document.getElementById('customRoomId');
+        const turnIndicator = document.getElementById('turnIndicator');
+        const overlay = document.getElementById('startOverlay');
+        const scorePanel = document.getElementById('scoreboardPanel');
+        const peerError = document.getElementById('displayPeerError');
+        const peerWaiting = document.getElementById('waitingRoom');
+        const cancelPeerBtn = document.getElementById('btnCancelPeer');
+
+        function toggleFullScreen() {
+            let elem = document.documentElement;
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (elem.requestFullscreen) { elem.requestFullscreen(); }
+                else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
+            } else {
+                if (document.exitFullscreen) { document.exitFullscreen(); }
+                else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
+            }
+        }
+
+        document.getElementById('btnFullscreen').addEventListener('click', toggleFullScreen);
+
+        document.getElementById('btnExitGame').addEventListener('click', () => {
+            if (confirm("Thoát về màn hình chính?")) {
+                if (peer) peer.destroy(); peer = null; if (conn) conn.close(); conn = null;
+                isOnline = false; isHost = false; 
+                
+                if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+
+                document.getElementById('startOverlay').style.display = 'flex';
+                setTimeout(() => document.getElementById('startOverlay').style.opacity = '1', 50);
+                document.getElementById('menuSelection').style.display = 'flex'; 
+                document.getElementById('onlineSetup').style.display = 'none'; 
+                document.getElementById('waitingRoom').style.display = 'none'; 
+                document.getElementById('readyPanel').style.display = 'none';
+                document.getElementById('gameContainer').style.display = 'none';
+                matchPhase = 'PRACTICE'; balls = []; isCueBallStopped = true; ctx.clearRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT); drawTableLayout(); drawPockets();
+            }
+        });
+
+        async function lockGameOrientation() {
+            let elem = document.documentElement;
+            try {
+                if (elem.requestFullscreen) await elem.requestFullscreen();
+                else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen();
+            } catch (err) {}
+
+            try {
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('landscape');
+                }
+            } catch (err) {}
+        }
+
+        function backToMenu(errorMsg = "") {
+            if (peer) peer.destroy(); peer = null; if (conn) conn.close(); conn = null;
+            isOnline = false; isHost = false; peerWaiting.style.display = 'none'; document.getElementById('onlineSetup').style.display = 'flex';
+            if (errorMsg) { peerError.innerText = errorMsg; peerError.style.display = 'block'; } else { peerError.style.display = 'none'; }
+            
+            let btnH = document.getElementById('btnHost');
+            btnH.innerText = "Tạo Phòng"; btnH.disabled = false;
+            let btnJ = document.getElementById('btnJoin');
+            btnJ.innerText = "Vào Phòng"; btnJ.disabled = false;
+        }
+        cancelPeerBtn.onclick = () => backToMenu();
+
+        document.getElementById('btnOffline').onclick = () => { 
+            lockGameOrientation(); 
+            initAudio(); isOnline = false; overlay.style.opacity = '0'; 
+            setTimeout(() => overlay.style.display = 'none', 500); 
+            document.getElementById('gameContainer').style.display = 'flex';
+            matchPhase = 'PRACTICE'; resetMatch(); 
+        };
+        
+        document.getElementById('btnOnline').onclick = () => { 
+            lockGameOrientation();
+            initAudio(); document.getElementById('menuSelection').style.display = 'none'; document.getElementById('onlineSetup').style.display = 'flex'; 
+        };
+        
+        document.getElementById('btnBack').onclick = () => { peerError.style.display = 'none'; document.getElementById('menuSelection').style.display = 'flex'; document.getElementById('onlineSetup').style.display = 'none'; };
+
+        document.getElementById('btnHost').onclick = () => {
+            initAudio(); peerError.style.display = 'none'; hostName = document.getElementById('playerNameInput').value.trim() || "HOST";
+            let roomId = customRoomInput.value.trim(); if (!roomId) return alert("Nhập mã phòng tự tạo (VD: phongvip123)!");
+            let btn = document.getElementById('btnHost');
+            btn.innerText = "Đang tạo..."; btn.disabled = true;
+            peer = new Peer(roomId); 
+            peer.on('open', (id) => { 
+                isHost = true; document.getElementById('onlineSetup').style.display = 'none'; 
+                peerWaiting.style.display = 'block'; document.getElementById('displayWaitingMsg').style.display = 'block'; 
+                document.getElementById('displayRoomId').innerText = id; 
+                btn.innerText = "Tạo Phòng"; btn.disabled = false;
+            });
+            peer.on('error', (err) => { 
+                btn.innerText = "Tạo Phòng"; btn.disabled = false;
+                if (err.type === 'id-taken') backToMenu("Lỗi: Mã phòng đã tồn tại!"); 
+                else if (err.type === 'network') backToMenu("Lỗi mạng."); 
+                else if (err.type === 'disconnected') backToMenu("Server ngắt kết nối."); 
+                else backToMenu("Lỗi kết nối: " + err.type); 
+            });
+            peer.on('connection', (connection) => { 
+                conn = connection; 
+                const onConnOpen = () => { setupNetworkEvents(); isOnline = true; isMyTurn = true; startGameOnlineUI(); };
+                if (conn.open) onConnOpen(); else conn.on('open', onConnOpen);
+            });
+        };
+
+        document.getElementById('btnJoin').onclick = () => {
+            initAudio(); peerError.style.display = 'none'; clientName = document.getElementById('playerNameInput').value.trim() || "GUEST";
+            let targetRoomId = customRoomInput.value.trim(); if (!targetRoomId) return alert("Nhập mã phòng!");
+            let btn = document.getElementById('btnJoin');
+            btn.innerText = "Đang kết nối..."; btn.disabled = true;
+            peer = new Peer(); 
+            peer.on('open', () => { 
+                peerWaiting.style.display = 'block'; document.getElementById('onlineSetup').style.display = 'none'; 
+                document.getElementById('displayWaitingMsg').style.display = 'none'; 
+                document.getElementById('displayRoomId').innerText = "Kết nối tới: " + targetRoomId; 
+                conn = peer.connect(targetRoomId); 
+                const onClientOpen = () => { isHost = false; isOnline = true; isMyTurn = false; setupNetworkEvents(); startGameOnlineUI(); };
+                if (conn.open) onClientOpen(); else conn.on('open', onClientOpen);
+                conn.on('error', (err) => { backToMenu("Mã phòng sai hoặc đối thủ thoát."); }); 
+            });
+            peer.on('error', (err) => { 
+                btn.innerText = "Vào Phòng"; btn.disabled = false;
+                if (err.type === 'network') backToMenu("Lỗi mạng."); else backToMenu("Lỗi kết nối."); 
+            });
+        };
+
+        function startGameOnlineUI() {
+            overlay.style.opacity = '0'; setTimeout(() => overlay.style.display = 'none', 500);
+            document.getElementById('gameContainer').style.display = 'flex';
+            scorePanel.style.display = 'flex'; isMatchStarted = false; myReadyStatus = false; enemyReadyStatus = false;
+            document.getElementById('gameModeSelect').disabled = !isHost;
+            document.getElementById('readyPanel').style.display = 'block'; document.getElementById('btnReadyStart').innerText = "SẴN SÀNG"; document.getElementById('btnReadyStart').style.background = "#00b894"; document.getElementById('readyStatusDisplay').innerText = `Bạn: Chưa | Đối thủ: Chưa`;
+            matchPhase = 'PRACTICE'; resetMatch(); updateTurnUI();
+        }
+
+        function updateReadyUI() { document.getElementById('readyStatusDisplay').innerText = `Bạn: ${myReadyStatus ? "Sẵn sàng" : "Chưa"} | Đối thủ: ${enemyReadyStatus ? "Sẵn sàng" : "Chưa"}`; }
+        function checkBothReady() { if (isHost && myReadyStatus && enemyReadyStatus) { sendNetworkData({ type: 'SYNC_START_LAG' }); startLagPhase(); } }
+        function startActualMatch(hostTurn) { matchPhase = 'PLAY'; isMatchStarted = true; document.getElementById('readyPanel').style.display = 'none'; hostScore = 0; clientScore = 0; updateScoreUI(); resetGame(hostTurn); }
+
+        document.getElementById('btnReadyStart').addEventListener('click', () => {
+            myReadyStatus = !myReadyStatus; document.getElementById('btnReadyStart').innerText = myReadyStatus ? "HỦY SẴN SÀNG" : "SẴN SÀNG"; document.getElementById('btnReadyStart').style.background = myReadyStatus ? "#d63031" : "#00b894";
+            sendNetworkData({ type: 'SYNC_READY', status: myReadyStatus }); updateReadyUI(); if (isHost) checkBothReady();
+        });
+
+        function setupNetworkEvents() {
+            conn.on('data', (data) => {
+                if (data.type === 'SYNC_NAME_CLIENT') { clientName = data.name; updateScoreUI(); }
+                else if (data.type === 'SYNC_NAME_HOST') { hostName = data.name; updateScoreUI(); }
+                else if (data.type === 'SYNC_START_LAG') { startLagPhase(); }
+                else if (data.type === 'SYNC_LAG_SHOOT') { executeLagShot(data.power, data.isHost); }
+                else if (data.type === 'SYNC_AIM') { aimSlider.value = data.aim; } 
+                else if (data.type === 'SYNC_SPIN') { spinX = data.x; spinY = data.y; updateSpinUI(); }
+                else if (data.type === 'SYNC_CUE_POS') { if (cueBall) { cueBall.x = data.x; cueBall.y = data.y; } }
+                
+                else if (data.type === 'SYNC_EXTENSION') {
+                    if (data.isHost) hostExtensionUsed = true;
+                    else clientExtensionUsed = true;
+                    turnTimeLeft += 30;
+                    updateTimerUI();
+                    showNotification("Đã gọi thêm 30s!");
+                }
+
+                else if (data.type === 'SYNC_SHOOT') { 
+                    shotInitiatedByMe = false; 
+                    if (cueBall && data.cueX !== undefined) { cueBall.x = data.cueX; cueBall.y = data.cueY; }
+                    
+                    powerSlider.value = data.power; elevationSlider.value = data.elev; 
+                    if(data.cueType === 'jump') document.getElementById('cueJump').click(); else if (data.cueType === 'break') document.getElementById('cueBreak').click(); else document.getElementById('cuePlay').click(); 
+                    startStrokeAnimation(data.power, data.aim, data.elev, data.spinX, data.spinY, data.cueType, false); 
+                }
+                
+                else if (data.type === 'SYNC_STATE') {
+                    if (!shotInitiatedByMe) {
+                        latestSyncState = data.balls;
+                    }
+                }
+
+                else if (data.type === 'SYNC_FIRST_HIT') {
+                    if (!shotInitiatedByMe) {
+                        let fb = balls.find(x => x.number === data.id);
+                        if (fb) firstHitBall = fb;
+                    }
+                }
+
+                else if (data.type === 'SYNC_POCKET_CALL') { calledPocket = data.pocket; updateLowestTarget(); }
+                else if (data.type === 'PASS_TURN') { 
+                    // [Bổ sung] Đồng bộ vị trí cuối cùng trước khi chuyển lượt để giải quyết độ trễ mạng
+                    if (latestSyncState) {
+                        latestSyncState.forEach(d => {
+                            let b = balls.find(x => x.number === d[0]);
+                            if (b && !b.isPocketing && b.active) {
+                                b.x = d[1]; b.y = d[2]; b.z = d[3]; b.vx = d[4]; b.vy = d[5];
+                                if (d[6] === 0) b.active = false;
+                                if (d[7] === 1) {
+                                    b.isPocketing = true;
+                                }
+                                if (d[8] !== undefined && d[8] !== null && d[8] >= 0) {
+                                    b.pocketIndex = d[8];
+                                    b.targetPocket = pockets[d[8]]; 
+                                }
+                            }
+                        });
+                        latestSyncState = null;
+                    }
+
+                    // [Bổ sung] Hủy ngay lập tức các hoạt động gậy đang dở dang của đối thủ
+                    isStroking = false;
+                    pendingShot = null;
+                    shotInProgress = false;
+
+                    isMyTurn = true; 
+                    if (data.reason === 'timeout') {
+                        showFoulPopup("Đối thủ hết giờ!", () => {
+                            isBallInHand = true; 
+                            if (!cueBall.active || cueBall.isPocketing) { 
+                                cueBall.isPocketing = false;
+                                cueBall.active = true; 
+                                cueBall.x = 200; cueBall.y = TABLE_HEIGHT / 2; cueBall.z = 0; 
+                                cueBall.vx = 0; cueBall.vy = 0; cueBall.vz = 0; 
+                                cueBall.spinEnergyX = 0; cueBall.spinEnergyY = 0; 
+                            } 
+                            calledPocket = null; updateLowestTarget();
+                        });
+                    } else if (data.foulMsg) {
+                        showFoulPopup(data.foulMsg, () => {
+                            isBallInHand = true; 
+                            if (!cueBall.active || cueBall.isPocketing) { 
+                                cueBall.isPocketing = false;
+                                cueBall.active = true; 
+                                cueBall.x = 200; cueBall.y = TABLE_HEIGHT / 2; cueBall.z = 0; 
+                                cueBall.vx = 0; cueBall.vy = 0; cueBall.vz = 0; 
+                                cueBall.spinEnergyX = 0; cueBall.spinEnergyY = 0; 
+                            } 
+                            calledPocket = null; updateLowestTarget();
+                        });
+                    } else {
+                        calledPocket = null; updateLowestTarget();
+                    }
+                    updateTurnUI(); 
+                    resetTimer();
+                }
+                else if (data.type === 'SYNC_SCORE') { hostScore = data.hostScore; clientScore = data.clientScore; updateScoreUI(); }
+                else if (data.type === 'SYNC_GAME_RESTART') { gameModeSelect.value = data.mode; gameMode = data.mode; resetGame(data.hostTurn); }
+                else if (data.type === 'SYNC_RESTART_MATCH') { gameModeSelect.value = data.mode; gameMode = data.mode; hostScore = 0; clientScore = 0; updateScoreUI(); resetGame(data.hostTurn); }
+                else if (data.type === 'SYNC_READY') { enemyReadyStatus = data.status; updateReadyUI(); if(isHost) checkBothReady(); }
+                else if (data.type === 'SYNC_START_ACTUAL_MATCH') { startActualMatch(data.hostTurn); }
+                else if (data.type === 'SYNC_RETURN_TO_PRACTICE') { isMatchStarted = false; myReadyStatus = false; enemyReadyStatus = false; document.getElementById('readyPanel').style.display = 'block'; document.getElementById('btnReadyStart').innerText = "SẴN SÀNG"; document.getElementById('btnReadyStart').style.background = "#00b894"; updateReadyUI(); matchPhase = 'PRACTICE'; resetMatch(); }
+            });
+            conn.on('close', () => { alert("Đối thủ thoát phòng!"); isOnline = false; isMyTurn = true; turnIndicator.innerText = "OFFLINE"; turnIndicator.className = ""; scorePanel.style.display = 'none'; document.getElementById('readyPanel').style.display = 'none'; if(peer) peer.destroy(); peer = null; });
+            
+            if (isHost) { 
+                sendNetworkData({ type: 'SYNC_NAME_HOST', name: hostName }); 
+            } else { 
+                sendNetworkData({ type: 'SYNC_NAME_CLIENT', name: clientName }); 
+            }
+        }
+
+        function sendNetworkData(data) { if (isOnline && conn && conn.open) conn.send(data); }
+
+        function updateTurnUI() {
+            if (!isOnline) { 
+                turnIndicator.innerText = "OFFLINE"; turnIndicator.className = ""; 
+                btnExtendTimer.style.display = 'none';
+                return; 
+            }
+            
+            btnExtendTimer.style.display = 'inline-block';
+            
+            if (matchPhase === 'LAG') { 
+                turnIndicator.innerText = "GIÀNH LƯỢT BẮN"; turnIndicator.className = "turn-mine"; 
+                btnExtendTimer.disabled = true;
+                return; 
+            }
+            if (isMyTurn) { 
+                turnIndicator.innerText = "LƯỢT CỦA BẠN"; turnIndicator.className = "turn-mine"; 
+                let myExtUsed = isHost ? hostExtensionUsed : clientExtensionUsed;
+                btnExtendTimer.disabled = myExtUsed;
+            } else { 
+                turnIndicator.innerText = "CHỜ ĐỐI THỦ..."; turnIndicator.className = "turn-enemy"; 
+                btnExtendTimer.disabled = true;
+            }
+        }
+
+        function updateScoreUI() { document.getElementById('hostScoreUI').innerText = hostScore; document.getElementById('clientScoreUI').innerText = clientScore; document.getElementById('hostNameDisplay').innerText = hostName; document.getElementById('clientNameDisplay').innerText = clientName; }
+        function resetMatch() { hostScore = 0; clientScore = 0; updateScoreUI(); resetGame(true); }
+
+        function gameLoop() {
+            frameCount++;
+            ctx.clearRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT); drawTableLayout(); drawPockets(); 
+
+            updateTimerLogic();
+
+            if (matchPhase === 'LAG') {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.45)'; ctx.font = "bold 16px 'Segoe UI'"; ctx.textAlign = "center";
+                ctx.fillText("GIÀNH LƯỢT BẮN: Kéo lực bắn chạm băng đối diện.", TABLE_WIDTH/2, TABLE_HEIGHT/2 - 20);
+                ctx.fillText("Ai nảy về gần băng xuất phát nhất sẽ Phá Bi!", TABLE_WIDTH/2, TABLE_HEIGHT/2 + 20);
+                ctx.textAlign = "start";
+            } else if (isCueBallStopped && !isFoulAnimating) {
+                if (isBreakShot) { const breakLineX = TABLE_WIDTH / 3; ctx.beginPath(); ctx.moveTo(breakLineX, CUSHION_WIDTH); ctx.lineTo(breakLineX, TABLE_HEIGHT - CUSHION_WIDTH); ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = 'rgba(255, 255, 255, 0.45)'; ctx.font = "bold 14px 'Segoe UI'"; ctx.fillText("Kéo bi cái để phá bi", CUSHION_WIDTH + 15, CUSHION_WIDTH + 26); } 
+                else if (isBallInHand) { ctx.fillStyle = 'rgba(255, 255, 255, 0.45)'; ctx.font = "bold 14px 'Segoe UI'"; ctx.fillText("BI TRONG TAY: Kéo thả", CUSHION_WIDTH + 15, CUSHION_WIDTH + 26); } 
+                else if ((gameMode === '10ball' || (gameMode === '8ball' && lowestBallTarget === 8)) && calledPocket === null) { ctx.fillStyle = 'rgba(214, 48, 49, 0.95)'; ctx.font = "bold 18px 'Segoe UI'"; ctx.textAlign = 'center'; ctx.shadowColor = 'rgba(0,0,0,0.85)'; ctx.shadowBlur = 10; ctx.fillText("CHẠM VÀO LỖ ĐỂ GỌI", TABLE_WIDTH/2, TABLE_HEIGHT/2 + 62); ctx.textAlign = 'start'; ctx.shadowBlur = 0; }
+            }
+
+            let currentlyMoving = false;
+            if (!isFoulAnimating) { 
+                for (let step = 0; step < SUB_STEPS; step++) {
+                    balls.forEach(ball => { ball.updatePhysics(); if (ball.active && (Math.abs(ball.vx) > 0.01 || Math.abs(ball.vy) > 0.01 || ball.z > 0.1 || ball.isPocketing || Math.abs(ball.vz) > 0.1)) currentlyMoving = true; });
+                    for (let i = 0; i < balls.length; i++) { for (let j = i + 1; j < balls.length; j++) resolveCollision(balls[i], balls[j]); }
+                }
+            }
+
+            if (isOnline && matchPhase === 'PLAY') {
+                if (shotInitiatedByMe && currentlyMoving) {
+                    if (frameCount % 3 === 0) {
+                        let syncData = balls.map(b => [b.number, b.x, b.y, b.z, b.vx, b.vy, b.active ? 1 : 0, b.isPocketing ? 1 : 0, b.pocketIndex]);
+                        sendNetworkData({ type: 'SYNC_STATE', balls: syncData });
+                    }
+                } else if (!isMyTurn && !shotInitiatedByMe && latestSyncState) {
+                    latestSyncState.forEach(d => {
+                        let b = balls.find(x => x.number === d[0]);
+                        if (b && !b.isPocketing && b.active) {
+                            b.x = d[1]; b.y = d[2]; b.z = d[3]; b.vx = d[4]; b.vy = d[5];
+                            if (d[6] === 0) b.active = false;
+                            if (d[7] === 1) {
+                                b.isPocketing = true;
+                            }
+                            if (d[8] !== undefined && d[8] !== null && d[8] >= 0) {
+                                b.pocketIndex = d[8];
+                                b.targetPocket = pockets[d[8]]; 
+                            }
+                        }
+                    });
+                    latestSyncState = null;
+                }
+            }
+            
+            if (shotInProgress && !currentlyMoving && !isFoulAnimating) {
+                if (matchPhase === 'LAG') {
+                    shotInProgress = false;
+                    if (lagHostShot && lagClientShot && !lagResolved && Math.abs(hostBall.vx) < 0.05 && Math.abs(clientBall.vx) < 0.05) {
+                        lagResolved = true;
+                        
+                        let hostDist = hostBall.hitRightCushion ? Math.abs(hostBall.x - CUSHION_WIDTH) : 9999;
+                        let clientDist = clientBall.hitRightCushion ? Math.abs(clientBall.x - CUSHION_WIDTH) : 9999;
+                        
+                        let hostWins = hostDist <= clientDist;
+                        
+                        if (hostDist === 9999 && clientDist === 9999) {
+                            hostWins = true; 
+                        }
+                        
+                        lagWinnerName = hostWins ? hostName : clientName;
+                        
+                        targetDisplay.innerHTML = `🏆 ${lagWinnerName} thắng Lag!`;
+                        targetDisplay.style.backgroundColor = "#00b894";
+                        
+                        if (isHost) { setTimeout(() => { sendNetworkData({ type: 'SYNC_START_ACTUAL_MATCH', hostTurn: hostWins }); startActualMatch(hostWins); }, 4000); }
+                    }
+                } else {
+                    let wasBreakShot = isBreakShot; shotInProgress = false; isBreakShot = false; elevationSlider.value = 0; powerSlider.value = 0;
+                    if (wasBreakShot && document.getElementById('cuePlay')) { document.getElementById('cuePlay').click(); }
+
+                    if (shotInitiatedByMe && isOnline && matchPhase === 'PLAY') {
+                        let finalSyncData = balls.map(b => [b.number, b.x, b.y, b.z, 0, 0, b.active ? 1 : 0, b.isPocketing ? 1 : 0, b.pocketIndex]);
+                        sendNetworkData({ type: 'SYNC_STATE', balls: finalSyncData });
+                    }
+
+                    let isFoul = false; let isWin = false; let isLose = false; let failMsg = "Lỗi!"; let isOfflineBreakMiscue = false;
+
+                    if (currentMiscueMsg) { isFoul = true; failMsg = currentMiscueMsg; if (wasBreakShot && !isOnline) { isOfflineBreakMiscue = true; } currentMiscueMsg = null; } 
+                    else {
+                        if (cueBallScratchedThisShot) { isFoul = true; failMsg = cueBallOffTableThisShot ? "Lỗi! Cái văng ra." : "Lỗi! Rớt cái."; } 
+                        if (gameMode === '9ball' || gameMode === '10ball' || gameMode === '7ball') { if (firstHitBall === null || firstHitBall.number !== lowestBallTarget) { if(!isFoul) { isFoul = true; failMsg = "Lỗi! Sai bi mục tiêu."; } } } 
+                        else if (gameMode === '8ball') {
+                            if (firstHitBall === null) { if(!isFoul) { isFoul = true; failMsg = "Lỗi! Không chạm bi."; } } 
+                            else if (lowestBallTarget === 8 && firstHitBall.number !== 8) { if(!isFoul) { isFoul = true; failMsg = "Lỗi! Phải chạm bi 8."; } }
+                            else if (lowestBallTarget !== 8 && firstHitBall.number === 8) { if(!isFoul) { isFoul = true; failMsg = "Lỗi! Chạm bi 8 trước."; } }
+                            else if (lowestBallTarget !== 8 && playerGroup !== null) {
+                                if (playerGroup === 'solids' && firstHitBall.number > 7) { if(!isFoul) { isFoul = true; failMsg = "Lỗi! Phải đánh Bi Trơn."; } } 
+                                else if (playerGroup === 'stripes' && firstHitBall.number < 9) { if(!isFoul) { isFoul = true; failMsg = "Lỗi! Phải đánh Bi Sọc."; } }
+                            }
+                        }
+                        if (objectBallOffTableThisShot && !isFoul) { isFoul = true; failMsg = "Lỗi! Bi mục tiêu văng ngoài."; }
+                    }
+
+                    let eightBallData = pocketedBallsThisShot.find(b => b.ball.number === 8);
+                    if (gameMode === '8ball' && eightBallData) {
+                        if (lowestBallTarget !== 8) { isLose = true; failMsg = "Thua! Bi 8 rớt quá sớm."; } 
+                        else { if (eightBallData.pocketIndex !== calledPocket || eightBallData.pocketIndex === -1) { isLose = true; failMsg = "Thua! Bi 8 rớt sai lỗ."; } else if (isFoul) { isLose = true; failMsg = "Thua! Rớt bi 8 nhưng lỗi."; } else { isWin = true; } }
+                    }
+                    if (gameMode === '10ball' && !isFoul && !wasBreakShot && !isOfflineBreakMiscue) {
+                        let anyTargetDropped = pocketedBallsThisShot.some(b => b.ball.number === lowestBallTarget || b.ball.number === 10);
+                        let intendedBallPocketed = pocketedBallsThisShot.some(b => (b.ball.number === lowestBallTarget || b.ball.number === 10) && b.pocketIndex === calledPocket);
+                        if (anyTargetDropped && !intendedBallPocketed) { isFoul = true; failMsg = "Lỗi! Rớt sai lỗ gọi."; }
+                    }
+
+                    let moneyBallNumber = gameMode === '9ball' ? 9 : (gameMode === '10ball' ? 10 : (gameMode === '7ball' ? 7 : null));
+                    if (moneyBallNumber) { let moneyBallData = pocketedBallsThisShot.find(b => b.ball.number === moneyBallNumber); if (moneyBallData) { if (isFoul || moneyBallData.pocketIndex === -1) { moneyBallData.ball.active = true; moneyBallData.ball.x = 550; moneyBallData.ball.y = TABLE_HEIGHT / 2; moneyBallData.ball.vx = 0; moneyBallData.ball.vy = 0; } else { isWin = true; } } }
+
+                    if (gameMode === '8ball' && playerGroup === null && !isFoul && !wasBreakShot && !isOfflineBreakMiscue) { let hasPocketedObjectBall = pocketedBallsThisShot.some(b => b.ball.number !== 8 && !b.ball.isCue && b.pocketIndex !== -1); if (hasPocketedObjectBall && firstHitBall) { if (firstHitBall.number >= 1 && firstHitBall.number <= 7) playerGroup = 'solids'; else if (firstHitBall.number >= 9 && firstHitBall.number <= 15) playerGroup = 'stripes'; } }
+
+                    let switchTurn = false;
+                    if (isOnline && !shotInitiatedByMe) { switchTurn = false; } 
+                    else if (!isWin && !isLose && !isOfflineBreakMiscue) { 
+                        let validBallPocketed = false;
+                        if (!isFoul) { if (gameMode === '8ball') { validBallPocketed = pocketedBallsThisShot.some(b => b.ball.number !== 8 && !b.ball.isCue && b.pocketIndex !== -1); } else if (gameMode === '9ball' || gameMode === '10ball' || gameMode === '7ball') { validBallPocketed = pocketedBallsThisShot.some(b => !b.ball.isCue && b.pocketIndex !== -1); } }
+                        if (isFoul || !validBallPocketed) { switchTurn = true; }
+                    }
+
+                    if (isLose || isWin) {
+                        targetDisplay.innerHTML = isLose ? ("💀 " + failMsg) : "🏆 THẮNG!"; targetDisplay.style.backgroundColor = isLose ? "#d63031" : "#00b894";
+                        if (isOnline && isHost) {
+                            let hostWinsRound = isWin ? shotInitiatedByMe : !shotInitiatedByMe;
+                            if (isMatchStarted) {
+                                if (hostWinsRound) hostScore++; else clientScore++;
+                                updateScoreUI(); sendNetworkData({ type: 'SYNC_SCORE', hostScore: hostScore, clientScore: clientScore });
+                                if (hostScore >= 7 || clientScore >= 7) { let matchWinner = hostScore >= 7 ? hostName : clientName; setTimeout(() => { alert(`🎉 CHÚC MỪNG! ${matchWinner} đã vô địch (Race to 7)!`); isMatchStarted = false; myReadyStatus = false; enemyReadyStatus = false; document.getElementById('readyPanel').style.display = 'block'; document.getElementById('btnReadyStart').innerText = "SẴN SÀNG"; document.getElementById('btnReadyStart').style.background = "#00b894"; updateReadyUI(); matchPhase = 'PRACTICE'; resetMatch(); sendNetworkData({ type: 'SYNC_RETURN_TO_PRACTICE', mode: gameMode }); }, 4000); } 
+                                else { setTimeout(() => { resetGame(hostWinsRound); sendNetworkData({ type: 'SYNC_GAME_RESTART', mode: gameMode, hostTurn: hostWinsRound }); }, 3500); }
+                            } else { setTimeout(() => { resetGame(hostWinsRound); sendNetworkData({ type: 'SYNC_GAME_RESTART', mode: gameMode, hostTurn: hostWinsRound }); }, 3500); }
+                        } else if(!isOnline) { setTimeout(() => resetGame(true), 3500); }
+                    } 
+                    else if (isOfflineBreakMiscue) { showFoulPopup(failMsg, () => { resetGame(true); }); }
+                    else {
+                        if (!isOnline || shotInitiatedByMe) {
+                            if (isFoul) { 
+                                triggerFoul(failMsg); 
+                                if (switchTurn) { 
+                                    isMyTurn = false; 
+                                    if(isOnline) sendNetworkData({ type: 'PASS_TURN', foulMsg: failMsg }); 
+                                    updateTurnUI(); 
+                                } 
+                                resetTimer(); 
+                            } 
+                            else { 
+                                calledPocket = null; 
+                                updateLowestTarget(); 
+                                if (switchTurn) { 
+                                    isMyTurn = false; 
+                                    if(isOnline) sendNetworkData({ type: 'PASS_TURN', foulMsg: null }); 
+                                    updateTurnUI(); 
+                                } 
+                                resetTimer(); 
+                            }
+                        }
+                    }
+                }
+            }
+
+            isCueBallStopped = !currentlyMoving;
+
+            let disableAll = false;
+            const needsToCall = (gameMode === '10ball' && calledPocket === null && !isBreakShot) || (gameMode === '8ball' && lowestBallTarget === 8 && calledPocket === null);
+
+            if (matchPhase === 'LAG') {
+                let myLagShotDone = isHost ? lagHostShot : lagClientShot;
+                disableAll = myLagShotDone || isStroking;
+                aimSlider.disabled = true; elevationSlider.disabled = true; 
+                powerSlider.disabled = disableAll; 
+                shootBtn.disabled = disableAll || parseFloat(powerSlider.value) <= 0;
+                document.querySelectorAll('input[name="cueType"]').forEach(rad => rad.disabled = true);
+            } else {
+                disableAll = !isCueBallStopped || isDraggingCueBall || isFoulAnimating || needsToCall || (isOnline && !isMyTurn) || isStroking;
+                aimSlider.disabled = disableAll; powerSlider.disabled = disableAll; elevationSlider.disabled = disableAll; shootBtn.disabled = disableAll || parseFloat(powerSlider.value) <= 0;
+                document.querySelectorAll('input[name="cueType"]').forEach(rad => rad.disabled = disableAll);
+            }
+
+            if(isFoulAnimating) isStroking = false; 
+
+            checkPockets(); balls.slice().sort((a,b) => a.y - b.y).forEach(ball => ball.draw());
+
+            let canDrawCue = false;
+            if (matchPhase === 'LAG') {
+                let myLagShotDone = isHost ? lagHostShot : lagClientShot;
+                canDrawCue = !myLagShotDone && cueBall && cueBall.active;
+                if (isStroking && pendingShot) canDrawCue = true;
+            } else {
+                canDrawCue = isCueBallStopped && cueBall && cueBall.active && !isDraggingCueBall && !isFoulAnimating;
+            }
+
+            if (canDrawCue) {
+                let currentPower = parseFloat(powerSlider.value) || 0; let aimAngle = (parseFloat(aimSlider.value) || 0) * (Math.PI / 180); let elevationAngle = (parseFloat(elevationSlider.value) || 0) * (Math.PI / 180);
+                let visualPower = currentPower; let simPower = currentPower; let currentCueTypeDraw = currentCueType; let spX_draw = spinX; let spY_draw = spinY;
+
+                if (isStroking && pendingShot) {
+                    strokePhase += 0.3; 
+                    if (strokePhase >= targetStrokes * Math.PI * 2) { 
+                        isStroking = false; 
+                        if (pendingShot.isLag) { executeLagShot(pendingShot.power, isHost); } else { executeShotLocally(pendingShot.power, pendingShot.aim, pendingShot.elev, pendingShot.spX, pendingShot.spY, pendingShot.cueType); }
+                        pendingShot = null; visualPower = 0; simPower = 0; 
+                    } 
+                    else { let strokeIntensity = (1 - Math.cos(strokePhase)) / 2; visualPower = pendingShot.power * strokeIntensity; simPower = pendingShot.power; aimAngle = (parseFloat(pendingShot.aim) || 0) * (Math.PI / 180); elevationAngle = (parseFloat(pendingShot.elev) || 0) * (Math.PI / 180); currentCueTypeDraw = pendingShot.cueType; spX_draw = pendingShot.spX; spY_draw = pendingShot.spY; }
+                }
+
+                let dirX = Math.cos(aimAngle); let dirY = Math.sin(aimAngle); 
+                let stickDist = BALL_RADIUS + 10 + (visualPower * (currentCueTypeDraw === 'break' ? 1.8 : 1)); let stickStartX = cueBall.x - dirX * stickDist; let stickStartY = cueBall.y - dirY * stickDist;
+                let shaftColor1, shaftColor2, buttColor1, buttColor2, buttColor3; let shaftEndLength = 180, buttEndLength = 350;
+
+                if (currentCueTypeDraw === 'break') { shaftColor1 = '#74b9ff'; shaftColor2 = '#0984e3'; buttColor1 = '#2d3436'; buttColor2 = '#d63031'; buttColor3 = '#000'; } 
+                else if (currentCueTypeDraw === 'jump') { shaftEndLength = 100; buttEndLength = 200; shaftColor1 = '#dfe6e9'; shaftColor2 = '#b2bec3'; buttColor1 = '#55efc4'; buttColor2 = '#00b894'; buttColor3 = '#000'; } 
+                else { shaftColor1 = '#f1c40f'; shaftColor2 = '#d35400'; buttColor1 = '#bdc3c7'; buttColor2 = '#2c3e50'; buttColor3 = '#000'; }
+
+                if (!needsToCall && (!isStroking || visualPower >= 0)) {
+                    ctx.save(); ctx.translate(stickStartX, stickStartY); ctx.rotate(aimAngle + Math.PI); 
+                    let stickScale = currentCueTypeDraw === 'play' ? 1 : 1 - Math.sin(elevationAngle) * 0.3; ctx.scale(stickScale, 1);
+                    if (isMyTurn || !isOnline || matchPhase === 'LAG') {
+                        let myLagShotDone = (matchPhase === 'LAG') ? (isHost ? lagHostShot : lagClientShot) : false;
+                        if (!myLagShotDone) {
+                            ctx.shadowColor = 'rgba(0,0,0,0.85)'; ctx.shadowBlur = 8; ctx.shadowOffsetX = 3.5; ctx.shadowOffsetY = 6.5; ctx.fillStyle = '#0984e3'; ctx.fillRect(0, -3.5, 5, 7); ctx.fillStyle = '#f5f6fa'; ctx.fillRect(5, -3.5, 12, 7); 
+                            let shaftGradient = ctx.createLinearGradient(17, 0, shaftEndLength, 0); shaftGradient.addColorStop(0, shaftColor1); shaftGradient.addColorStop(1, shaftColor2); ctx.fillStyle = shaftGradient; ctx.beginPath(); ctx.moveTo(17, -3.5); ctx.lineTo(shaftEndLength, -5.3); ctx.lineTo(shaftEndLength, 5.3); ctx.lineTo(17, 3.5); ctx.fill();
+                            let buttGradient = ctx.createLinearGradient(shaftEndLength, 0, buttEndLength, 0); buttGradient.addColorStop(0, buttColor1); buttGradient.addColorStop(0.05, buttColor2); buttGradient.addColorStop(0.5, buttColor3); buttGradient.addColorStop(1, '#000'); ctx.fillStyle = buttGradient; ctx.beginPath(); ctx.moveTo(shaftEndLength, -5.3); ctx.lineTo(buttEndLength, -8); ctx.lineTo(buttEndLength, 8); ctx.lineTo(shaftEndLength, 5.3); ctx.fill();
+                        }
+                    } ctx.restore();
+                }
+
+                if ((isMyTurn || !isOnline || matchPhase === 'LAG') && simPower > 0 && matchPhase !== 'LAG') {
+                    let simForce = (simPower / 100) * 50; let simForceXY = simForce; let isMiscueSim = false;
+                    if (isBreakShot && currentCueTypeDraw !== 'break') isMiscueSim = true; else if (elevationAngle > 0 && currentCueTypeDraw !== 'jump') isMiscueSim = true;
+
+                    if (isMiscueSim) { simForceXY = simForce * 0.05; } else {
+                        if (currentCueTypeDraw === 'break') { simForceXY = isBreakShot ? simForce * 1.8 : simForce * 0.6; } 
+                        else if (currentCueTypeDraw === 'jump') { if (elevationAngle > 0) { simForceXY = simForce * Math.cos(elevationAngle) * 0.75; } else { simForceXY = simForce * 0.4; } } 
+                        else { simForceXY = simForce; }
+                    }
+
+                    let sVx = dirX * simForceXY; let sVy = dirY * simForceXY; let sVz = 0;
+                    if (currentCueTypeDraw === 'jump' && elevationAngle > 0 && !isMiscueSim) { sVz = simForce * Math.sin(elevationAngle) * 2.8; }
+                    let sSpinX = dirX * simForceXY * spY_draw * (currentCueTypeDraw==='break'?0.2:1); let sSpinY = dirY * simForceXY * spY_draw * (currentCueTypeDraw==='break'?0.2:1); let sSide = simForceXY * spX_draw * 0.2; 
+                    let simX = cueBall.x; let simY = cueBall.y; let simZ = 0; let path = [{x: simX, y: simY, z: simZ}]; let landingPoint = null; let hitBall = null; let bounceCount = 0; let isJumpingSim = sVz > 0; let rad2 = BALL_RADIUS * 2; let rad2Sq = rad2 * rad2;
+
+                    for (let step = 0; step < 4000; step++) {
+                        if (simZ > 0 || sVz !== 0) { sVz -= GRAVITY / SUB_STEPS; simZ += sVz / SUB_STEPS; if (simZ < 0) { simZ = 0; sVz *= -0.5; if (Math.abs(sVz) < 1.0) sVz = 0; if (isJumpingSim && !landingPoint) landingPoint = {x: simX, y: simY}; } }
+                        let friction = (simZ > 0.5) ? 1.0 : STEP_FRICTION; simX += sVx / SUB_STEPS; simY += sVy / SUB_STEPS; sVx *= friction; sVy *= friction; sVx = Math.max(-80, Math.min(80, sVx)); sVy = Math.max(-80, Math.min(80, sVy)); sSpinX *= SPIN_DECAY; sSpinY *= SPIN_DECAY; sSide *= SPIN_DECAY;
+                        if (Math.abs(sVx) < 0.015) sVx = 0; if (Math.abs(sVy) < 0.015) sVy = 0; if (sVx === 0 && sVy === 0 && simZ === 0 && sVz === 0) break;
+                        let hitWall = false; let jumpingOver = simZ > 8; 
+                        if (!jumpingOver) {
+                            if (simX - BALL_RADIUS < CUSHION_WIDTH) { simX = CUSHION_WIDTH + BALL_RADIUS; sVx *= -CUSHION_BOUNCE; hitWall = true; sVy += sSide * CUSHION_SPIN_STRENGTH; sSide *= 0.5; } else if (simX + BALL_RADIUS > TABLE_WIDTH - CUSHION_WIDTH) { simX = TABLE_WIDTH - CUSHION_WIDTH - BALL_RADIUS; sVx *= -CUSHION_BOUNCE; hitWall = true; sVy -= sSide * CUSHION_SPIN_STRENGTH; sSide *= 0.5; }
+                            if (simY - BALL_RADIUS < CUSHION_WIDTH) { simY = CUSHION_WIDTH + BALL_RADIUS; sVy *= -CUSHION_BOUNCE; hitWall = true; sVx += sSide * CUSHION_SPIN_STRENGTH; sSide *= 0.5; } else if (simY + BALL_RADIUS > TABLE_HEIGHT - CUSHION_WIDTH) { simY = TABLE_HEIGHT - CUSHION_WIDTH - BALL_RADIUS; sVy *= -CUSHION_BOUNCE; hitWall = true; sVx -= sSide * CUSHION_SPIN_STRENGTH; sSide *= 0.5; }
+                        }
+                        if (hitWall) { bounceCount++; path.push({x: simX, y: simY, z: simZ}); if (bounceCount > 3) break; }
+                        let collided = false;
+                        for (let i = 0; i < balls.length; i++) { let b = balls[i]; if (!b.active || b.isCue) continue; if (Math.abs(simZ - b.z) > BALL_RADIUS * 1.5) continue; let dx = b.x - simX; let dy = b.y - simY; if (dx*dx + dy*dy < rad2Sq) { hitBall = b; let dist = Math.hypot(dx, dy); let overlap = rad2 - dist; simX -= (dx / dist) * overlap; simY -= (dy / dist) * overlap; collided = true; break; } }
+                        if (step % 10 === 0 || collided || hitWall) { path.push({x: simX, y: simY, z: simZ}); }
+                        if (collided) break;
+                    }
+
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; ctx.lineWidth = 1.5; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+                    for (let i = 1; i < path.length; i++) { ctx.lineTo(path[i].x, path[i].y); } ctx.stroke();
+
+                    ctx.strokeStyle = (currentCueTypeDraw === 'jump') ? 'rgba(116, 185, 255, 0.85)' : 'rgba(255, 255, 255, 0.85)'; ctx.lineWidth = 2; ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y - Math.max(0, path[0].z * 1.2));
+                    for (let i = 1; i < path.length; i++) { ctx.lineTo(path[i].x, path[i].y - Math.max(0, path[i].z * 1.2)); } ctx.stroke();
+
+                    if (landingPoint && currentCueTypeDraw === 'jump' && elevationAngle > 0 && !isMiscueSim) {
+                        ctx.beginPath(); ctx.arc(landingPoint.x, landingPoint.y, BALL_RADIUS * 1.2, 0, Math.PI*2); ctx.fillStyle = 'rgba(0, 184, 148, 0.25)'; ctx.fill(); ctx.strokeStyle = '#00b894'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(landingPoint.x - 6, landingPoint.y); ctx.lineTo(landingPoint.x + 6, landingPoint.y); ctx.moveTo(landingPoint.x, landingPoint.y - 6); ctx.lineTo(landingPoint.x, landingPoint.y + 6); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+                    }
+
+                    if (hitBall) {
+                        let hitX = simX, hitY = simY; let finalZ = path[path.length-1].z; let hitVisualY = hitY - Math.max(0, finalZ * 1.2);
+                        ctx.beginPath(); ctx.arc(hitX, hitVisualY, BALL_RADIUS, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'; ctx.fill(); ctx.strokeStyle = 'rgba(255, 255, 255, 0.88)'; ctx.lineWidth = 1.5; ctx.stroke();
+                        let nx = hitBall.x - hitX; let ny = hitBall.y - hitY; let nLen = Math.hypot(nx, ny); nx /= nLen; ny /= nLen;
+                        let targetColor = hitBall.color;
+                        if (gameMode !== '8ball' && hitBall.number !== lowestBallTarget) targetColor = '#d63031';
+                        else if (gameMode === '8ball') { if (lowestBallTarget === 8 && hitBall.number !== 8) targetColor = '#d63031'; else if (lowestBallTarget !== 8 && hitBall.number === 8) targetColor = '#d63031'; else if (lowestBallTarget !== 8 && playerGroup === 'solids' && hitBall.number > 7) targetColor = '#d63031'; else if (lowestBallTarget !== 8 && playerGroup === 'stripes' && hitBall.number < 9) targetColor = '#d63031'; }
+                        let velAlongNormal = sVx * nx + sVy * ny;
+                        if (velAlongNormal > 0) {
+                            let j = -(1 + BALL_RESTITUTION) * velAlongNormal / 2; let objVx = -(j * nx); let objVy = -(j * ny); sVx += (j * nx); sVy += (j * ny); 
+                            let oX = hitBall.x, oY = hitBall.y; let objPath = [{x: oX, y: oY}]; let objHitAnotherBall = false;
+                            
+                            for(let s=0; s < 30 * 15; s++) { 
+                                oX += objVx / SUB_STEPS; oY += objVy / SUB_STEPS; objVx *= Math.pow(FRICTION, 1/SUB_STEPS); objVy *= Math.pow(FRICTION, 1/SUB_STEPS);
+                                if (Math.abs(objVx) < 0.1 && Math.abs(objVy) < 0.1) break;
+                                if (oX - BALL_RADIUS < CUSHION_WIDTH || oX + BALL_RADIUS > TABLE_WIDTH - CUSHION_WIDTH || oY - BALL_RADIUS < CUSHION_WIDTH || oY + BALL_RADIUS > TABLE_HEIGHT - CUSHION_WIDTH) { objPath.push({x: oX, y: oY}); break; }
+                                let collidedWithOther = false;
+                                for (let b2 of balls) { if (!b2.active || b2 === hitBall || b2 === cueBall) continue; if (Math.hypot(b2.x - oX, b2.y - oY) < BALL_RADIUS * 2) { collidedWithOther = true; objHitAnotherBall = true; break; } }
+                                if (s % 15 === 0 || collidedWithOther) objPath.push({x: oX, y: oY}); if (collidedWithOther) break;
+                            }
+                            ctx.beginPath(); ctx.moveTo(objPath[0].x, objPath[0].y); for(let i=1; i<objPath.length; i++) ctx.lineTo(objPath[i].x, objPath[i].y); ctx.strokeStyle = targetColor; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]); 
+                            let endObj = objPath[objPath.length - 1]; ctx.beginPath(); ctx.arc(endObj.x, endObj.y, BALL_RADIUS, 0, Math.PI * 2); if(objHitAnotherBall) { ctx.fillStyle = 'rgba(214, 48, 49, 0.35)'; ctx.fill(); } ctx.strokeStyle = targetColor; ctx.lineWidth = 1.5; ctx.stroke();
+                            let postPath = [{x: hitX, y: hitY}]; let curVx = sVx, curVy = sVy;
+                            for(let s=0; s<150; s++) { curVx -= sSpinX * DRAW_FOLLOW_STRENGTH; curVy -= sSpinY * DRAW_FOLLOW_STRENGTH; sSpinX *= SPIN_DECAY; sSpinY *= SPIN_DECAY; hitX += curVx / SUB_STEPS; hitY += curVy / SUB_STEPS; curVx *= Math.pow(FRICTION, 1/SUB_STEPS); curVy *= Math.pow(FRICTION, 1/SUB_STEPS); if (Math.abs(curVx) < 0.1 && Math.abs(curVy) < 0.1) break; if (s % 5 === 0) postPath.push({x: hitX, y: hitY}); }
+                            ctx.beginPath(); ctx.moveTo(postPath[0].x, postPath[0].y); for(let i=1; i<postPath.length; i++) ctx.lineTo(postPath[i].x, postPath[i].y); ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+                        }
+                    }
+                }
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.getElementById('btnHost').addEventListener('click', () => { hostName = document.getElementById('playerNameInput').value.trim() || "HOST"; updateScoreUI(); });
+        document.getElementById('btnJoin').addEventListener('click', () => { clientName = document.getElementById('playerNameInput').value.trim() || "GUEST"; updateScoreUI(); });
+
+        resetGame(); gameLoop();
+    </script>
+</body>
+</html>
