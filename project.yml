@@ -15,9 +15,8 @@ targets:
       INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
       INFOPLIST_KEY_UIRequiresFullScreen: YES
       INFOPLIST_KEY_UIStatusBarHidden: YES
-      # Ép game luôn quay ngang màn hình (Landscape)
       INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
-      # Cấu hình xuất IPA chưa ký (Unsigned)
       CODE_SIGNING_REQUIRED: NO
       CODE_SIGNING_ALLOWED: NO
       CODE_SIGN_IDENTITY: ""
+      VALIDATE_PRODUCT: NO # <-- BẠN THÊM DÒNG NÀY VÀO ĐÂY
