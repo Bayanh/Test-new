@@ -14,12 +14,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # BƯỚC MỚI: Tự động sinh ra file Swift và file project.yml (Đã fix Info.plist)
       - name: Auto-generate Swift Wrapper and Config
         run: |
           mkdir -p Sources
+          mkdir -p GameWeb
           
-          # 1. Tạo file BilliardsApp.swift
+          # Tự động tìm tất cả file .html ở ngoài và copy vào GameWeb thành index.html
+          find . -name "*.html" ! -path "./GameWeb/*" -exec cp {} GameWeb/index.html \;
+
+          # 1. Tạo file BilliardsApp.swift (Đã nâng cấp thuật toán tìm file và cấp quyền Web)
           cat << 'EOF' > Sources/BilliardsApp.swift
           import SwiftUI
           import WebKit
@@ -41,6 +44,9 @@ jobs:
                   config.allowsInlineMediaPlayback = true
                   config.mediaTypesRequiringUserActionForPlayback = []
                   
+                  // Mẹo: Cấp quyền đọc file local cao nhất cho WebView (tránh lỗi đen màn do CORS)
+                  config.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
+                  
                   let webView = WKWebView(frame: .zero, configuration: config)
                   webView.scrollView.isScrollEnabled = false
                   webView.scrollView.bounces = false
@@ -50,14 +56,17 @@ jobs:
               }
               
               func updateUIView(_ webView: WKWebView, context: Context) {
+                  // Quét tìm file ở cả dạng thư mục con lẫn dạng phẳng
                   if let url = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "GameWeb") {
+                      webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+                  } else if let url = Bundle.main.url(forResource: "index", withExtension: "html") {
                       webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
                   }
               }
           }
           EOF
           
-          # 2. Tạo file project.yml với tính năng tự sinh Info.plist
+          # 2. Tạo file project.yml (Đã ép thư mục dưới dạng folder reference)
           cat << 'EOF' > project.yml
           name: Billiards
           options:
@@ -71,6 +80,7 @@ jobs:
                 - path: Sources
               resources:
                 - path: GameWeb
+                  type: folder
               settings:
                 GENERATE_INFOPLIST_FILE: YES
                 MARKETING_VERSION: 1.0
