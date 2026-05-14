@@ -1,0 +1,45 @@
+name: Build Billiards HTML to IPA
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Unsigned IPA
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+
+      - name: Build Xcode Project (Unsigned)
+        run: |
+          xcodebuild clean build \
+            -project "Billiards.xcodeproj" \
+            -scheme "Billiards" \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath $PWD/build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package .app into .ipa
+        run: |
+          mkdir -p Payload
+          mv $PWD/build/Build/Products/Release-iphoneos/Billiards.app Payload/
+          zip -qr Billiards-Unsigned.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Billiards-Game-IPA
+          path: Billiards-Unsigned.ipa
