@@ -14,6 +14,78 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # BƯỚC MỚI: Tự động sinh ra file Swift và file project.yml (Đã fix Info.plist)
+      - name: Auto-generate Swift Wrapper and Config
+        run: |
+          mkdir -p Sources
+          
+          # 1. Tạo file BilliardsApp.swift
+          cat << 'EOF' > Sources/BilliardsApp.swift
+          import SwiftUI
+          import WebKit
+
+          @main
+          struct BilliardsApp: App {
+              var body: some Scene {
+                  WindowGroup {
+                      ContentView()
+                          .ignoresSafeArea()
+                          .statusBar(hidden: true)
+                  }
+              }
+          }
+
+          struct ContentView: UIViewRepresentable {
+              func makeUIView(context: Context) -> WKWebView {
+                  let config = WKWebViewConfiguration()
+                  config.allowsInlineMediaPlayback = true
+                  config.mediaTypesRequiringUserActionForPlayback = []
+                  
+                  let webView = WKWebView(frame: .zero, configuration: config)
+                  webView.scrollView.isScrollEnabled = false
+                  webView.scrollView.bounces = false
+                  webView.isOpaque = false
+                  webView.backgroundColor = .black
+                  return webView
+              }
+              
+              func updateUIView(_ webView: WKWebView, context: Context) {
+                  if let url = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "GameWeb") {
+                      webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+                  }
+              }
+          }
+          EOF
+          
+          # 2. Tạo file project.yml với tính năng tự sinh Info.plist
+          cat << 'EOF' > project.yml
+          name: Billiards
+          options:
+            bundleIdPrefix: com.game
+          targets:
+            Billiards:
+              type: application
+              platform: iOS
+              deploymentTarget: "14.0"
+              sources:
+                - path: Sources
+              resources:
+                - path: GameWeb
+              settings:
+                GENERATE_INFOPLIST_FILE: YES
+                MARKETING_VERSION: 1.0
+                CURRENT_PROJECT_VERSION: 1
+                INFOPLIST_KEY_UILaunchScreen_Generation: YES
+                INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+                INFOPLIST_KEY_UIRequiresFullScreen: YES
+                INFOPLIST_KEY_UIStatusBarHidden: YES
+                INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+                CODE_SIGNING_REQUIRED: NO
+                CODE_SIGNING_ALLOWED: NO
+                CODE_SIGN_IDENTITY: ""
+                VALIDATE_PRODUCT: NO
+          EOF
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
@@ -27,6 +99,7 @@ jobs:
             -scheme "Billiards" \
             -configuration Release \
             -sdk iphoneos \
+            -destination "generic/platform=iOS" \
             -derivedDataPath $PWD/build \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
